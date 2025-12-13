@@ -100,7 +100,7 @@ export default function RegisterBox() {
               onClick={togglePasswordVisibility}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 cursor-pointer"
             >
-              {showPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+              {showPassword ? <FaEye size={20} /> : <FaEyeSlash size={20} />}
             </button>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function RegisterBox() {
               onClick={toggleConfirmPasswordVisibility}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 cursor-pointer"
             >
-              {showConfirmPassword ? <FaEyeSlash size={20} /> : <FaEye size={20} />}
+              {showConfirmPassword ? <FaEye size={20} /> : <FaEyeSlash size={20} />}
             </button>
           </div>
         </div>
