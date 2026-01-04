@@ -75,7 +75,7 @@ export default function LoginBox() {
             <input type="checkbox" className="rounded border-gray-300 text-orange-600 focus:ring-orange-500 cursor-pointer" />
             <span className="ml-2 text-sm text-gray-600 cursor-pointer">Remember me</span>
           </label>
-          <Link href="/forgot-password" className="text-sm text-orange-600 font-semibold hover:text-orange-700">
+          <Link href="/forgotPassword" className="text-sm text-orange-600 font-semibold hover:text-orange-700">
             Forgot password?
           </Link>
         </div>
@@ -128,3 +128,5 @@ export default function LoginBox() {
     </motion.div>
   );
 }
+
+

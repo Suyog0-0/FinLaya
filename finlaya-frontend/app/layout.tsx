@@ -11,7 +11,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
   title: "FinLaya",
   description: "FinLaya is an application that manages and tracks financial data efficiently.",
-};
+}; 
 
 export default function RootLayout({
   children,
