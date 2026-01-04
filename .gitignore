@@ -4,4 +4,4 @@ node_modules/
 dist/
 
 # Page for testing supabase connection
-app/(user)/test-supabase/
+# app/(user)/test-supabase/
