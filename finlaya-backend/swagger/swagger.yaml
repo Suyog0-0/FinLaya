@@ -1,0 +1,33 @@
+openapi: 3.0.0
+info:
+  title: FinLaya API
+  description: Backend API for FinLaya Expense Management System
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+
+paths:
+  /auth/login:
+    post:
+      summary: User login
+      tags:
+        - Authentication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+        '401':
+          description: Invalid credentials
