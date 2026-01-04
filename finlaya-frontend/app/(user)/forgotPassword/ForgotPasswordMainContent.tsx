@@ -1,9 +1,36 @@
 'use client'
 
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import { supabase } from '@/lib/supabase';
 
-export default function forgotPasswordMainContent() {
+export default function ForgotPasswordMainContent() {
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    setMessage('');
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/resetPassword`,
+    });
+
+    setIsLoading(false);
+
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setMessage('Password reset link sent! Check your email.');
+      setEmail('');
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50 px-4 relative overflow-hidden">
       <motion.div
@@ -37,21 +64,51 @@ export default function forgotPasswordMainContent() {
           transition={{ delay: 0.3 }}
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
+          {message && (
+            <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-lg text-sm mb-4">
+              {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm mb-4">
+              {error}
+            </div>
+          )}
+
           <p className="text-gray-600 mb-6 text-center">
             Enter your email to receive a password reset link.
           </p>
-          <input
-            type="email"
-            placeholder="example@gmail.com"
-            className="w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all mb-4"
-          />
-          <motion.button
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow cursor-pointer"
-          >
-            Send Reset Link
-          </motion.button>
+          
+          <form onSubmit={handleSubmit}>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="example@gmail.com"
+              className="w-full px-4 py-3 rounded-lg border border-gray-300 placeholder-gray-400 text-gray-800 focus:ring-2 focus:ring-orange-500 focus:border-transparent outline-none transition-all mb-4"
+              required
+              disabled={isLoading}
+            />
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-6 h-6 border-2 border-white border-t-transparent rounded-full mx-auto"
+                />
+              ) : (
+                'Send Reset Link'
+              )}
+            </motion.button>
+          </form>
+
           <p className="text-sm text-gray-500 mt-4 text-center">
             Remembered your password?{' '}
             <Link href="/login" className="text-orange-600 font-semibold hover:text-orange-700">
