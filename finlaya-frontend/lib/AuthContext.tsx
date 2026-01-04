@@ -47,6 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: name, // stored as meta data 
         },
+        emailRedirectTo: `${window.location.origin}/home`, // Redirect to /home after confirmation
       },
     });
     return { error };

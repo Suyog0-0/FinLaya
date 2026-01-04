@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/AuthContext';
 // import { motion } from 'framer-motion';
 
-export default function HomeMainContent() {
+export default function HomMainContent() {
   const { user, loading, signOut } = useAuth();
   const router = useRouter();
 
