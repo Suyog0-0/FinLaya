@@ -2,3 +2,6 @@ node_modules/
 .env
 .next/
 dist/
+
+# Page for testing supabase connection
+app/(user)/test-supabase/
