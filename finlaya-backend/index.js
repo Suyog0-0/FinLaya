@@ -13,8 +13,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.post('/auth/login', (req, res) => {
   res.json({ message: 'Login successful' });
 });
-app.listen(3000, () => {
-  console.log('Server running on http://localhost:3000');
-  console.log('Swagger docs at http://localhost:3000/api-docs');
+
+const PORT = 5000;
+app.listen(PORT, () => {
+  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Swagger docs at http://localhost:${PORT}/api-docs`);
 });
 

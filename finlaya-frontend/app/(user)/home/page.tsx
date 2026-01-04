@@ -1,9 +1,8 @@
-import React from 'react'
+import HomePageContent from './HomeMainContent';
 
-export default function page() {
+export default function Page() {
   return (
-    <div>
-      
-    </div>
-  )
+  <HomePageContent />
+
+  );
 }

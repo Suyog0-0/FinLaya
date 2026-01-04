@@ -1,56 +1,47 @@
-'use client'
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { useAuth } from '@/lib/AuthContext';
 
-export default function SplashScreen() {
+export default function HomePage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
+  const [showSplash, setShowSplash] = useState(true);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setIsLoading(false);
-      const redirectTimer = setTimeout(() => {
-        router.push('/login');
-      }, 500);
-      return () => clearTimeout(redirectTimer);
-    }, 1500);
+      setShowSplash(false);
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [router]);
-
-  useEffect(() => {
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = 'auto';
-    };
   }, []);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.4 }}
-      className="min-h-screen w-full bg-gradient-to-br from-amber-50 via-white to-orange-50 flex items-center justify-center p-4"
-    >
-      <div className="text-center">
-        <motion.h1
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', stiffness: 150, damping: 15 }}
-          className="text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent"
-        >
-          FinLaya
-        </motion.h1>
+  useEffect(() => {
+    // Only redirect after splash is gone and auth is loaded
+    if (!showSplash && !loading) {
+      if (!user) {
+        // User doesn't have account/signed in -> go to login
+        router.push('/login');
+      } else {
+        // User exists -> go to /home
+        router.push('/home');
+      }
+    }
+  }, [showSplash, user, loading, router]);
 
-        <motion.div
-          initial={{ width: 0 }}
-          animate={{ width: isLoading ? '100%' : '0%' }}
-          transition={{ duration: 1.2, ease: 'easeInOut' }}
-          className="h-1 mt-6 bg-gradient-to-r from-amber-500 to-orange-500 mx-auto rounded-full overflow-hidden max-w-32"
-        />
+  if (showSplash) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-amber-50 via-white to-orange-50">
+        <h1 className="text-4xl font-bold text-amber-600 animate-pulse">FinLaya</h1>
       </div>
-    </motion.div>
-  );
+    );
+  }
+
+  // Show loading state while auth is initializing
+  if (loading) {
+    return null; // or a loading spinner
+  }
+
+  // No in-place homepage content rendering since logged-in users are redirected to /home
+  return null;
 }

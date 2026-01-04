@@ -1,9 +1,7 @@
-import React from 'react'
+import SalaryAllocationMainContent from './SalaryAllocationMainContent';
 
-export default function page() {
+export default function Page() {
   return (
-    <div>
-      Salary Allocation Page
-    </div>
-  )
+  <SalaryAllocationMainContent />
+);
 }
