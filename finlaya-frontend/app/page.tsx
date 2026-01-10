@@ -24,7 +24,7 @@ export default function HomePage() {
         router.push('/login');
       } else {
         // User exists -> go to /home
-        router.push('/home');
+        router.push('/dashboard');
       }
     }
   }, [showSplash, user, loading, router]);

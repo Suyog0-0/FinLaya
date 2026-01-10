@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
 import { 
   LayoutDashboard, 
@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 const navLinks = [
-  { href: "/home", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/categories", label: "Categories", icon: PieChart },
   { href: "/settings", label: "Settings", icon: Settings },
@@ -26,14 +26,17 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, signOut } = useAuth();
 
   // Get user's name or email
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
+  // Logout handler
   const handleLogout = async () => {
     await signOut();
+    router.push("/login");
   };
 
   return (
@@ -97,7 +100,7 @@ export default function Navbar() {
                   <div className="border-t border-gray-200"></div>
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 w-full rounded-b-lg"
+                    className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 w-full rounded-b-lg cursor-pointer"
                   >
                     <LogOut size={16} />
                     <span>Logout</span>
@@ -164,7 +167,7 @@ export default function Navbar() {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 w-full"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 w-full cursor-pointer"
               >
                 <LogOut size={20} />
                 <span className="font-medium">Logout</span>
