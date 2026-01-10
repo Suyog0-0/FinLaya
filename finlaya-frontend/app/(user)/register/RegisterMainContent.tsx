@@ -20,7 +20,7 @@ export default function RegisterMainContent() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const router = useRouter();
-  const { signUp } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -68,6 +68,16 @@ export default function RegisterMainContent() {
         router.push('/login');
       }, 2000);
     }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setError('');
+    const { error: googleError } = await signInWithGoogle();
+    
+    if (googleError) {
+      setError(googleError.message);
+    }
+    // Note: Redirect happens automatically via Supabase
   };
 
   return (
@@ -245,6 +255,7 @@ export default function RegisterMainContent() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleGoogleSignUp}
               className="flex items-center justify-center px-6 py-2 border border-red-200 rounded-lg text-red-600 font-semibold bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
             >
               <FaGoogle className="mr-2" />

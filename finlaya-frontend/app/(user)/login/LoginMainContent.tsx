@@ -14,7 +14,7 @@ export default function LoginMainContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,6 +30,16 @@ export default function LoginMainContent() {
       // Redirect to home on success
       router.push('/home');
     }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setError('');
+    const { error: googleError } = await signInWithGoogle();
+    
+    if (googleError) {
+      setError(googleError.message);
+    }
+    // Note: Redirect happens automatically via Supabase
   };
 
   const togglePasswordVisibility = () => {
@@ -157,6 +167,7 @@ export default function LoginMainContent() {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              onClick={handleGoogleSignIn}
               className="flex items-center justify-center px-4 py-2 border border-red-200 rounded-lg text-red-600 font-semibold bg-red-50 hover:bg-red-100 transition-colors cursor-pointer"
             >
               <FaGoogle className="mr-2" />

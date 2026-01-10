@@ -1,4 +1,3 @@
-
 'use client'; 
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -11,6 +10,7 @@ interface AuthContextType {
 
   signUp: (email: string, password: string, name: string) => Promise<{ error: AuthError | null }>; // Sign up
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>; // Sign in
+  signInWithGoogle: () => Promise<{ error: AuthError | null }>; // Sign in with Google
   signOut: () => Promise<void>; // Sign out
 }
 
@@ -62,13 +62,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error };
   };
 
+  // Sign in with Google
+  const signInWithGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/home`,
+      },
+    });
+    return { error };
+  };
+
   // Sign out user
   const signOut = async () => {
     await supabase.auth.signOut();
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signUp, signIn, signInWithGoogle, signOut }}>
       {children}
     </AuthContext.Provider>
   );
