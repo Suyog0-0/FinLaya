@@ -47,7 +47,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         data: {
           full_name: name, // stored as meta data 
         },
-        emailRedirectTo: `${window.location.origin}/home`, // Redirect to /home after confirmation
+        emailRedirectTo: `${window.location.origin}/dashboard`, // Redirect to /dashboard after confirmation
       },
     });
     return { error };
@@ -67,7 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/home`,
+        redirectTo: `${window.location.origin}/dashboard`,
       },
     });
     return { error };

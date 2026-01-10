@@ -45,7 +45,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           
           {/* Logo */}
-          <Link href="/home" className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+          <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
             FinLaya
           </Link>
 

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
-export default function DashboardMainContent() {
+export default function DashboradMainContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
 

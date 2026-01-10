@@ -28,7 +28,7 @@ export default function LoginMainContent() {
       setError(signInError.message);
       setIsLoading(false);
     } else {
-      router.push('/home');
+      router.push('/dashboard');
     }
   };
 

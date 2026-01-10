@@ -23,7 +23,7 @@ export default function HomePage() {
         // User doesn't have account/signed in -> go to login
         router.push('/login');
       } else {
-        // User exists -> go to /home
+        // User exists -> go to /dashboard
         router.push('/dashboard');
       }
     }
