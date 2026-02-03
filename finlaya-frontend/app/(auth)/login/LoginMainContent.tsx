@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import LoginGoogle from './LoginGoogle';
 import LoginForm from './LoginForm';
+import api from '@/lib/api/client'; // Import API client
 
 export default function LoginMainContent() {
   const [email, setEmail] = useState('');
@@ -17,20 +18,31 @@ export default function LoginMainContent() {
   const router = useRouter();
   const { signIn } = useAuth();
 
+  
+  
+  
   const handleSubmit = async (e: React.FormEvent) => {
+
     e.preventDefault();
+
     setIsLoading(true);
+
     setError('');
 
+    // Login with Supabase (authentication)
     const { error: signInError } = await signIn(email, password);
-
     if (signInError) {
       setError(signInError.message);
       setIsLoading(false);
     } else {
+      // After successful Supabase login, notify backend
+      const backendResult = await api.auth.login(email, password);
+      console.log('Backend notified:', backendResult);
       router.push('/dashboard');
     }
   };
+
+
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
