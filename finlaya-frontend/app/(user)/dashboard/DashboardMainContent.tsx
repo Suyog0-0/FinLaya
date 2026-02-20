@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import OnboardingModal from '@/components/modals/onboarding/OnboardingModal';
+import OnboardingModal from '@/components/modals/Onboarding/OnboardingModal';
 import StatsCard from '@/components/(user)/shared/StatsCard';
 import SpendingTrendChart from '@/components/(user)/dashboard/SpendingTrendChart';
 import CategoryBreakdownChart from '@/components/(user)/dashboard/CategoryBreakdownChart';
