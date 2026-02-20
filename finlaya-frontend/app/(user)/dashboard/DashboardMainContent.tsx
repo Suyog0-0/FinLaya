@@ -10,7 +10,6 @@ import CategoryBreakdownChart from '@/components/(user)/dashboard/CategoryBreakd
 import BudgetStatus from '@/components/(user)/dashboard/BudgetStatus';
 import RecentTransactions from '@/components/(user)/dashboard/RecentTransactions';
 import { supabase } from '@/lib/supabase/client';
-import { Wallet, TrendingUp, TrendingDown, PiggyBank } from 'lucide-react';
 
 export default function DashboardMainContent() {
   const { user, loading } = useAuth();
@@ -92,6 +91,7 @@ export default function DashboardMainContent() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
               <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
             </div>
+            
             <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
               <span className="text-xl">+</span>
               Add Expense
@@ -100,38 +100,10 @@ export default function DashboardMainContent() {
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatsCard
-              title="Total Balance"
-              amount="NRs 2,400"
-              percentage="+12%"
-              isPositive={true}
-              icon={Wallet}
-              iconBg="bg-amber-50"
-            />
-            <StatsCard
-              title="Monthly Income"
-              amount="NRs 1,000"
-              percentage="+5%"
-              isPositive={true}
-              icon={TrendingUp}
-              iconBg="bg-green-50"
-            />
-            <StatsCard
-              title="Monthly Expenses"
-              amount="NRs 740"
-              percentage="-8%"
-              isPositive={false}
-              icon={TrendingDown}
-              iconBg="bg-red-50"
-            />
-            <StatsCard
-              title="Savings"
-              amount="NRs 260"
-              percentage="+24%"
-              isPositive={true}
-              icon={PiggyBank}
-              iconBg="bg-blue-50"
-            />
+            <StatsCard statId="balance" />
+            <StatsCard statId="income" />
+            <StatsCard statId="expenses" />
+            <StatsCard statId="savings" />
           </div>
 
           {/* Charts Row */}
