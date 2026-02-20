@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Receipt } from 'lucide-react';
+import { X, TrendingDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -196,8 +196,8 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
-                    <Receipt className="text-white" size={18} />
+                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-red-500 to-rose-500 flex items-center justify-center">
+                    <TrendingDown className="text-white" size={18} />
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-gray-900">Add Expense</h2>
@@ -227,7 +227,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                     onChange={handleChange}
                     placeholder="e.g. Grocery Store"
                     required
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none text-sm"
                   />
                 </div>
 
@@ -247,7 +247,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                       required
                       min="0"
                       step="0.01"
-                      className="w-full pl-14 pr-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none text-sm"
+                      className="w-full pl-14 pr-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none text-sm"
                     />
                   </div>
                 </div>
@@ -262,7 +262,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                       onChange={(e) => handleCategoryType(e.target.value)}
                       onFocus={() => setShowSuggestions(true)}
                       placeholder="Select or type a new category"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none text-sm"
+                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none text-sm"
                     />
                     {showSuggestions && (filteredSuggestions.length > 0 || categoryInput) && (
                       <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -271,7 +271,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                             key={cat.category_id}
                             type="button"
                             onClick={() => handleCategorySelect(cat)}
-                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-orange-50 hover:text-orange-600 transition-colors"
+                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
                           >
                             {cat.category_name}
                           </button>
@@ -283,7 +283,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                             <button
                               type="button"
                               onClick={() => setShowSuggestions(false)}
-                              className="w-full text-left px-4 py-2.5 text-sm text-orange-600 hover:bg-orange-50 font-medium transition-colors border-t border-gray-100"
+                              className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 font-medium transition-colors border-t border-gray-100"
                             >
                               + Create &ldquo;{categoryInput}&rdquo;
                             </button>
@@ -302,7 +302,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                     value={form.date}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none text-sm"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none text-sm"
                   />
                 </div>
 
@@ -313,7 +313,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                     name="paymentMethod"
                     value={form.paymentMethod}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none text-sm bg-white"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none text-sm bg-white"
                   >
                     {paymentMethods.map((m) => (
                       <option key={m} value={m}>{m}</option>
@@ -332,7 +332,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                     onChange={handleChange}
                     placeholder="Any additional details..."
                     rows={3}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-orange-400 focus:border-transparent outline-none text-sm resize-none"
+                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-red-400 focus:border-transparent outline-none text-sm resize-none"
                   />
                 </div>
 
@@ -342,7 +342,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  className="w-full bg-gradient-to-r from-red-500 to-rose-500 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed mt-2"
                 >
                   {isLoading ? (
                     <motion.div

@@ -19,6 +19,7 @@ interface Transaction {
   payment_method: string;
   category_name: string | null;
   category_id?: number | null;
+  type: 'expense' | 'income';
 }
 
 interface EditTransactionModalProps {
@@ -28,7 +29,9 @@ interface EditTransactionModalProps {
   transaction: Transaction | null;
 }
 
-const paymentMethods = ['Cash', 'Mobile Payment (eSewa/Khalti)'];
+const expensePaymentMethods = ['Cash', 'Mobile Payment (eSewa/Khalti)'];
+const incomePaymentMethods = ['Bank Transfer', 'Cash', 'Mobile Payment (eSewa/Khalti)', 'Cheque'];
+const incomeCategories = ['Salary', 'Freelance', 'Business', 'Investment', 'Rental', 'Gift', 'Bonus', 'Other'];
 
 export default function EditTransactionModal({
   isOpen,
@@ -37,44 +40,50 @@ export default function EditTransactionModal({
   transaction,
 }: EditTransactionModalProps) {
   const { user } = useAuth();
-  const [categories, setCategories] = useState<Category[]>([]);
+  const isIncome = transaction?.type === 'income';
+
+  // Expense-only state
+  const [expenseCategories, setExpenseCategories] = useState<Category[]>([]);
   const [categoryInput, setCategoryInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const categoryRef = useRef<HTMLDivElement>(null);
+
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const categoryRef = useRef<HTMLDivElement>(null);
 
   const [form, setForm] = useState({
     title: '',
     amount: '',
     date: '',
     paymentMethod: 'Cash',
+    incomeCategory: 'Salary',
   });
 
   // Pre-fill form when transaction changes
   useEffect(() => {
-    if (transaction) {
-      setForm({
-        title: transaction.description || '',
-        amount: String(transaction.amount),
-        date: transaction.expense_date,
-        paymentMethod: transaction.payment_method || 'Cash',
-      });
-      setCategoryInput(transaction.category_name || '');
-      setSelectedCategoryId(transaction.category_id ?? null);
-    }
+    if (!transaction) return;
+    setForm({
+      title: transaction.description || '',
+      amount: String(transaction.amount),
+      date: transaction.expense_date,
+      paymentMethod: transaction.payment_method || 'Cash',
+      incomeCategory: transaction.category_name || 'Salary',
+    });
+    setCategoryInput(transaction.category_name || '');
+    setSelectedCategoryId(transaction.category_id ?? null);
+    setError('');
   }, [transaction]);
 
-  // Fetch categories for combobox
+  // Fetch expense categories for combobox (only needed for expenses)
   useEffect(() => {
-    if (!user?.id || !isOpen) return;
+    if (!user?.id || !isOpen || isIncome) return;
     supabase
       .from('budget_categories')
       .select('category_id, category_name')
       .eq('user_id', user.id)
-      .then(({ data }) => setCategories(data || []));
-  }, [user?.id, isOpen]);
+      .then(({ data }) => setExpenseCategories(data || []));
+  }, [user?.id, isOpen, isIncome]);
 
   // Close suggestions on outside click
   useEffect(() => {
@@ -87,7 +96,7 @@ export default function EditTransactionModal({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const filteredSuggestions = categories.filter((c) =>
+  const filteredSuggestions = expenseCategories.filter((c) =>
     c.category_name.toLowerCase().includes(categoryInput.toLowerCase())
   );
 
@@ -105,47 +114,67 @@ export default function EditTransactionModal({
     setError('');
 
     try {
-      let categoryId = selectedCategoryId;
-
-      // Create new category if typed but not selected from list
-      if (categoryInput && !selectedCategoryId) {
-        const { data: newCat, error: catError } = await supabase
-          .from('budget_categories')
-          .insert({
-            user_id: user.id,
-            category_name: categoryInput,
-            allocation_percentage: 0,
-            budget_limit: 0,
-            current_balance: 0,
+      if (isIncome) {
+        const { error: updateError } = await supabase
+          .from('income')
+          .update({
+            description: form.title,
+            amount: parseFloat(form.amount),
+            category_name: form.incomeCategory,
+            income_date: form.date,
+            payment_method: form.paymentMethod,
+            updated_at: new Date().toISOString(),
           })
-          .select('category_id')
-          .single();
+          .eq('income_id', transaction.expense_id)
+          .eq('user_id', user.id);
 
-        if (catError) {
-          setError(`Failed to create category: ${catError.message}`);
+        if (updateError) {
+          setError(`Failed to update income: ${updateError.message}`);
           setIsLoading(false);
           return;
         }
-        categoryId = newCat.category_id;
-      }
+      } else {
+        let categoryId = selectedCategoryId;
 
-      const { error: updateError } = await supabase
-        .from('expenses')
-        .update({
-          description: form.title,
-          amount: parseFloat(form.amount),
-          category_id: categoryId,
-          expense_date: form.date,
-          payment_method: form.paymentMethod,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('expense_id', transaction.expense_id)
-        .eq('user_id', user.id);
+        if (categoryInput && !selectedCategoryId) {
+          const { data: newCat, error: catError } = await supabase
+            .from('budget_categories')
+            .insert({
+              user_id: user.id,
+              category_name: categoryInput,
+              allocation_percentage: 0,
+              budget_limit: 0,
+              current_balance: 0,
+            })
+            .select('category_id')
+            .single();
 
-      if (updateError) {
-        setError(`Failed to update expense: ${updateError.message}`);
-        setIsLoading(false);
-        return;
+          if (catError) {
+            setError(`Failed to create category: ${catError.message}`);
+            setIsLoading(false);
+            return;
+          }
+          categoryId = newCat.category_id;
+        }
+
+        const { error: updateError } = await supabase
+          .from('expenses')
+          .update({
+            description: form.title,
+            amount: parseFloat(form.amount),
+            category_id: categoryId,
+            expense_date: form.date,
+            payment_method: form.paymentMethod,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('expense_id', transaction.expense_id)
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          setError(`Failed to update expense: ${updateError.message}`);
+          setIsLoading(false);
+          return;
+        }
       }
 
       onSuccess();
@@ -157,6 +186,10 @@ export default function EditTransactionModal({
       setIsLoading(false);
     }
   };
+
+  const accentColor = isIncome ? 'from-emerald-500 to-green-500' : 'from-blue-500 to-indigo-500';
+  const ringColor = isIncome ? 'focus:ring-green-400' : 'focus:ring-blue-400';
+  const paymentMethods = isIncome ? incomePaymentMethods : expensePaymentMethods;
 
   return (
     <AnimatePresence>
@@ -181,11 +214,13 @@ export default function EditTransactionModal({
               {/* Header */}
               <div className="sticky top-0 bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between rounded-t-2xl">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center">
+                  <div className={`w-10 h-10 rounded-full bg-gradient-to-r ${accentColor} flex items-center justify-center`}>
                     <Pencil className="text-white" size={16} />
                   </div>
                   <div>
-                    <h2 className="text-lg font-bold text-gray-900">Edit Expense</h2>
+                    <h2 className="text-lg font-bold text-gray-900">
+                      Edit {isIncome ? 'Income' : 'Expense'}
+                    </h2>
                     <p className="text-xs text-gray-500">Update transaction details</p>
                   </div>
                 </div>
@@ -211,7 +246,7 @@ export default function EditTransactionModal({
                     value={form.title}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none text-sm"
+                    className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 ${ringColor} focus:ring-2 focus:border-transparent outline-none text-sm`}
                   />
                 </div>
 
@@ -230,46 +265,59 @@ export default function EditTransactionModal({
                       required
                       min="0"
                       step="0.01"
-                      className="w-full pl-14 pr-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none text-sm"
+                      className={`w-full pl-14 pr-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 ${ringColor} focus:ring-2 focus:border-transparent outline-none text-sm`}
                     />
                   </div>
                 </div>
 
-                {/* Category combobox */}
-                <div ref={categoryRef}>
+                {/* Category — dropdown for income, combobox for expense */}
+                <div ref={isIncome ? undefined : categoryRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={categoryInput}
-                      onChange={(e) => {
-                        setCategoryInput(e.target.value);
-                        setSelectedCategoryId(null);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      placeholder="Select or type a category"
-                      className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none text-sm"
-                    />
-                    {showSuggestions && filteredSuggestions.length > 0 && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                        {filteredSuggestions.map((cat) => (
-                          <button
-                            key={cat.category_id}
-                            type="button"
-                            onClick={() => {
-                              setCategoryInput(cat.category_name);
-                              setSelectedCategoryId(cat.category_id);
-                              setShowSuggestions(false);
-                            }}
-                            className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
-                          >
-                            {cat.category_name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  {isIncome ? (
+                    <select
+                      name="incomeCategory"
+                      value={form.incomeCategory}
+                      onChange={handleChange}
+                      className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 ${ringColor} focus:ring-2 focus:border-transparent outline-none text-sm bg-white`}
+                    >
+                      {incomeCategories.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={categoryInput}
+                        onChange={(e) => {
+                          setCategoryInput(e.target.value);
+                          setSelectedCategoryId(null);
+                          setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        placeholder="Select or type a category"
+                        className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 placeholder-gray-400 ${ringColor} focus:ring-2 focus:border-transparent outline-none text-sm`}
+                      />
+                      {showSuggestions && filteredSuggestions.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {filteredSuggestions.map((cat) => (
+                            <button
+                              key={cat.category_id}
+                              type="button"
+                              onClick={() => {
+                                setCategoryInput(cat.category_name);
+                                setSelectedCategoryId(cat.category_id);
+                                setShowSuggestions(false);
+                              }}
+                              className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                            >
+                              {cat.category_name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Date */}
@@ -281,7 +329,7 @@ export default function EditTransactionModal({
                     value={form.date}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none text-sm"
+                    className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 ${ringColor} focus:ring-2 focus:border-transparent outline-none text-sm`}
                   />
                 </div>
 
@@ -292,7 +340,7 @@ export default function EditTransactionModal({
                     name="paymentMethod"
                     value={form.paymentMethod}
                     onChange={handleChange}
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 focus:ring-2 focus:ring-blue-400 focus:border-transparent outline-none text-sm bg-white"
+                    className={`w-full px-4 py-2.5 rounded-lg border border-gray-300 text-gray-800 ${ringColor} focus:ring-2 focus:border-transparent outline-none text-sm bg-white`}
                   >
                     {paymentMethods.map((m) => (
                       <option key={m} value={m}>{m}</option>
@@ -306,7 +354,7 @@ export default function EditTransactionModal({
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-blue-500 to-indigo-500 text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed mt-2"
+                  className={`w-full bg-gradient-to-r ${accentColor} text-white py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50 disabled:cursor-not-allowed mt-2`}
                 >
                   {isLoading ? (
                     <motion.div

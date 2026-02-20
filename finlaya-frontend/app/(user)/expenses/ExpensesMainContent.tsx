@@ -9,6 +9,7 @@ import AddIncomeModal from '@/components/modals/AddIncomeModal';
 import EditTransactionModal from '@/components/modals/EditTransactionModal';
 import StatsCard from '@/components/(user)/shared/StatsCard';
 import TransactionHistory from '@/components/(user)/expenses/TransactionHistory';
+import SearchFilter from '@/components/(user)/expenses/SearchFilter';
 
 interface Transaction {
   expense_id: number;
@@ -28,7 +29,6 @@ interface ExpenseRecord {
   expense_date: string;
   payment_method: string;
   category_id: number | null;
-  // Supabase returns object for many-to-one joins, not array
   budget_categories: { category_name: string } | Array<{ category_name: string }> | null;
 }
 
@@ -74,12 +74,10 @@ export default function ExpensesMainContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [monthlySalary, setMonthlySalary] = useState(0);
 
-  // useCallback so the function reference is stable and can go in useEffect deps
   const fetchAll = useCallback(async () => {
     if (!user?.id) return;
     setIsLoading(true);
 
-    // Fetch expenses + salary in parallel
     const [expResult, incResult, salaryResult] = await Promise.all([
       supabase
         .from('expenses')
@@ -146,7 +144,6 @@ export default function ExpensesMainContent() {
       new Set(all.map((t) => t.category_name).filter(Boolean))
     ) as string[];
 
-    // Batch all state updates together to avoid cascading renders
     const salary = salaryResult.data ? Number(salaryResult.data.monthly_salary) : 0;
     setTransactions(all);
     setCategories(['All', ...unique]);
@@ -210,9 +207,9 @@ export default function ExpensesMainContent() {
 
             <button
               onClick={() => setIsExpenseModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-red-500 text-red-600 font-semibold text-sm bg-white hover:bg-red-50 transition-all shadow-sm hover:shadow-md"
             >
-              <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
                 <TrendingDown size={11} className="text-white" />
               </div>
               Add Expense
@@ -239,20 +236,23 @@ export default function ExpensesMainContent() {
           />
         </div>
 
-        {/* Transaction History */}
-        <TransactionHistory
-          transactions={transactions}
-          filtered={filtered}
+        {/* Search + Filter Component */}
+        <SearchFilter
           search={search}
           setSearch={setSearch}
           selectedCategory={selectedCategory}
           setSelectedCategory={setSelectedCategory}
           categories={categories}
-          isLoading={isLoading}
-          categoryColors={categoryColors}
-          onEdit={(t) => setEditingTransaction(t)}
-          onDelete={handleDelete}
         />
+
+        {/* Transaction History */}
+      <TransactionHistory
+        filtered={filtered}
+        isLoading={isLoading}
+        categoryColors={categoryColors}
+        onEdit={(t) => setEditingTransaction(t)}
+        onDelete={handleDelete}
+      />  
       </div>
 
       <AddExpenseModal
