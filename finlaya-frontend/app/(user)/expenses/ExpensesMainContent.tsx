@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Plus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import AddExpenseModal from '@/components/modals/AddExpenseModal';
+import AddIncomeModal from '@/components/modals/AddIncomeModal';
+import EditTransactionModal from '@/components/modals/EditTransactionModal';
 import StatsCard from '@/components/(user)/shared/StatsCard';
 import TransactionHistory from '@/components/(user)/expenses/TransactionHistory';
 
@@ -15,6 +17,8 @@ interface Transaction {
   expense_date: string;
   payment_method: string;
   category_name: string | null;
+  category_id?: number | null;
+  type: 'expense' | 'income';
 }
 
 interface ExpenseRecord {
@@ -23,12 +27,29 @@ interface ExpenseRecord {
   amount: number;
   expense_date: string;
   payment_method: string;
-  budget_categories: Array<{ category_name: string }>;
+  category_id: number | null;
+  // Supabase returns object for many-to-one joins, not array
+  budget_categories: { category_name: string } | Array<{ category_name: string }> | null;
+}
+
+interface IncomeRecord {
+  income_id: number;
+  description: string;
+  amount: number;
+  income_date: string;
+  payment_method: string;
+  category_name: string | null;
 }
 
 const categoryColors: Record<string, string> = {
   Food: 'bg-orange-100 text-orange-700',
   Income: 'bg-green-100 text-green-700',
+  Salary: 'bg-green-100 text-green-700',
+  Freelance: 'bg-teal-100 text-teal-700',
+  Business: 'bg-cyan-100 text-cyan-700',
+  Investment: 'bg-blue-100 text-blue-700',
+  Rental: 'bg-violet-100 text-violet-700',
+  Bonus: 'bg-emerald-100 text-emerald-700',
   Entertainment: 'bg-purple-100 text-purple-700',
   Utilities: 'bg-gray-200 text-gray-700',
   Transport: 'bg-blue-100 text-blue-700',
@@ -37,25 +58,30 @@ const categoryColors: Record<string, string> = {
   Housing: 'bg-yellow-100 text-yellow-700',
   Savings: 'bg-green-100 text-green-700',
   Others: 'bg-gray-100 text-gray-600',
+  Gift: 'bg-pink-100 text-pink-700',
+  Other: 'bg-gray-100 text-gray-600',
 };
 
 export default function ExpensesMainContent() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('All Categories');
-  const [categories, setCategories] = useState<string[]>(['All Categories']);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [categories, setCategories] = useState<string[]>(['All']);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isIncomeModalOpen, setIsIncomeModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [monthlySalary, setMonthlySalary] = useState(0);
 
-  // Fetch expenses and categories
-  useEffect(() => {
-    const fetchExpenses = async () => {
-      if (!user?.id) return;
-      setIsLoading(true);
+  // useCallback so the function reference is stable and can go in useEffect deps
+  const fetchAll = useCallback(async () => {
+    if (!user?.id) return;
+    setIsLoading(true);
 
-      const { data } = await supabase
+    // Fetch expenses + salary in parallel
+    const [expResult, incResult, salaryResult] = await Promise.all([
+      supabase
         .from('expenses')
         .select(`
           expense_id,
@@ -63,86 +89,100 @@ export default function ExpensesMainContent() {
           amount,
           expense_date,
           payment_method,
+          category_id,
           budget_categories (category_name)
         `)
         .eq('user_id', user.id)
-        .order('expense_date', { ascending: false });
+        .order('expense_date', { ascending: false }),
 
-      const mapped: Transaction[] = ((data as ExpenseRecord[] | null) || []).map((e: ExpenseRecord) => ({
+      supabase
+        .from('income')
+        .select('income_id, description, amount, income_date, payment_method, category_name')
+        .eq('user_id', user.id)
+        .order('income_date', { ascending: false }),
+
+      supabase
+        .from('users')
+        .select('monthly_salary')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+    ]);
+
+    const expenses: Transaction[] = ((expResult.data as ExpenseRecord[] | null) || []).map((e) => {
+      const cat = e.budget_categories;
+      const categoryName = cat
+        ? Array.isArray(cat)
+          ? cat[0]?.category_name ?? null
+          : (cat as { category_name: string }).category_name ?? null
+        : null;
+      return {
         expense_id: e.expense_id,
         description: e.description,
         amount: e.amount,
         expense_date: e.expense_date,
         payment_method: e.payment_method,
-        category_name: Array.isArray(e.budget_categories) && e.budget_categories.length > 0
-          ? e.budget_categories[0].category_name
-          : null,
-      }));
+        category_id: e.category_id,
+        category_name: categoryName,
+        type: 'expense' as const,
+      };
+    });
 
-      setTransactions(mapped);
+    const income: Transaction[] = ((incResult.data as IncomeRecord[] | null) || []).map((i) => ({
+      expense_id: i.income_id,
+      description: i.description,
+      amount: i.amount,
+      expense_date: i.income_date,
+      payment_method: i.payment_method,
+      category_name: i.category_name,
+      category_id: null,
+      type: 'income' as const,
+    }));
 
-      // Build category list from fetched data
-      const unique = Array.from(
-        new Set(mapped.map((t) => t.category_name).filter(Boolean))
-      ) as string[];
-      setCategories(['All Categories', ...unique]);
-      setIsLoading(false);
-    };
+    const all = [...expenses, ...income].sort(
+      (a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
+    );
 
-    fetchExpenses();
-  }, [user?.id]);
+    const unique = Array.from(
+      new Set(all.map((t) => t.category_name).filter(Boolean))
+    ) as string[];
 
-  // Fetch monthly salary from public.users
+    // Batch all state updates together to avoid cascading renders
+    const salary = salaryResult.data ? Number(salaryResult.data.monthly_salary) : 0;
+    setTransactions(all);
+    setCategories(['All', ...unique]);
+    setMonthlySalary(salary);
+    setIsLoading(false);
+  }, [user]);
+
   useEffect(() => {
-    if (!user?.id) return;
-    supabase
-      .from('users')
-      .select('monthly_salary')
-      .eq('user_id', user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (data) setMonthlySalary(Number(data.monthly_salary));
-      });
-  }, [user?.id]);
+    (async () => {
+      await fetchAll();
+    })();
+  }, [fetchAll]);
 
-  const totalExpenses = transactions.reduce((sum, t) => sum + Number(t.amount), 0);
-  const netBalance = monthlySalary - totalExpenses;
+  const totalExpenses = transactions
+    .filter((t) => t.type === 'expense')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const totalIncome = transactions
+    .filter((t) => t.type === 'income')
+    .reduce((sum, t) => sum + Number(t.amount), 0);
+
+  const netBalance = monthlySalary + totalIncome - totalExpenses;
 
   const filtered = transactions.filter((t) => {
     const matchSearch = t.description?.toLowerCase().includes(search.toLowerCase());
     const matchCategory =
-      selectedCategory === 'All Categories' || t.category_name === selectedCategory;
+      selectedCategory === 'All' || t.category_name === selectedCategory;
     return matchSearch && matchCategory;
   });
 
-  const handleRefresh = async () => {
-    if (!user?.id) return;
-    setIsLoading(true);
-    const { data } = await supabase
-      .from('expenses')
-      .select(`
-        expense_id,
-        description,
-        amount,
-        expense_date,
-        payment_method,
-        budget_categories (category_name)
-      `)
-      .eq('user_id', user.id)
-      .order('expense_date', { ascending: false });
-
-    const mapped: Transaction[] = ((data as ExpenseRecord[] | null) || []).map((e: ExpenseRecord) => ({
-      expense_id: e.expense_id,
-      description: e.description,
-      amount: e.amount,
-      expense_date: e.expense_date,
-      payment_method: e.payment_method,
-      category_name: Array.isArray(e.budget_categories) && e.budget_categories.length > 0
-        ? e.budget_categories[0].category_name
-        : null,
-    }));
-    setTransactions(mapped);
-    setIsLoading(false);
+  const handleDelete = async (id: number, type: 'expense' | 'income') => {
+    if (!confirm('Delete this transaction? This cannot be undone.')) return;
+    const table = type === 'expense' ? 'expenses' : 'income';
+    const col = type === 'expense' ? 'expense_id' : 'income_id';
+    await supabase.from(table).delete().eq(col, id).eq('user_id', user?.id);
+    fetchAll();
   };
 
   return (
@@ -152,38 +192,54 @@ export default function ExpensesMainContent() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Expenses</h1>
-            <p className="text-gray-500 text-sm mt-0.5">Track and manage your expenses</p>
+            <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
+            <p className="text-gray-500 text-sm mt-0.5">Track your income and expenses</p>
           </div>
-          <button
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2.5 rounded-lg font-semibold shadow hover:shadow-md transition-all text-sm"
-          >
-            <Plus size={16} />
-            Add Expense
-          </button>
+
+          {/* Pill buttons */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsIncomeModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-emerald-500 text-emerald-600 font-semibold text-sm bg-white hover:bg-emerald-50 transition-all shadow-sm hover:shadow-md"
+            >
+              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
+                <TrendingUp size={11} className="text-white" />
+              </div>
+              Add Income
+            </button>
+
+            <button
+              onClick={() => setIsExpenseModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+            >
+              <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+                <TrendingDown size={11} className="text-white" />
+              </div>
+              Add Expense
+            </button>
+          </div>
         </div>
 
-        {/* Summary Cards using StatsCard component */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <StatsCard 
-            statId="income" 
-            monthlySalary={monthlySalary} 
-            isLoading={isLoading} 
+          <StatsCard
+            statId="income"
+            monthlySalary={monthlySalary + totalIncome}
+            isLoading={isLoading}
           />
-          <StatsCard 
-            statId="expenses" 
-            monthlyExpenses={totalExpenses} 
-            isLoading={isLoading} 
+          <StatsCard
+            statId="expenses"
+            monthlyExpenses={totalExpenses}
+            isLoading={isLoading}
           />
-          <StatsCard 
-            statId="balance" 
-            totalBalance={netBalance} 
-            isLoading={isLoading} 
+          <StatsCard
+            statId="balance"
+            totalBalance={netBalance}
+            isLoading={isLoading}
           />
         </div>
 
-        {/* Transaction History Component */}
+        {/* Transaction History */}
         <TransactionHistory
           transactions={transactions}
           filtered={filtered}
@@ -194,13 +250,31 @@ export default function ExpensesMainContent() {
           categories={categories}
           isLoading={isLoading}
           categoryColors={categoryColors}
+          onEdit={(t) => setEditingTransaction(t)}
+          onDelete={handleDelete}
         />
       </div>
 
       <AddExpenseModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSuccess={handleRefresh}
+        isOpen={isExpenseModalOpen}
+        onClose={() => setIsExpenseModalOpen(false)}
+        onSuccess={fetchAll}
+      />
+
+      <AddIncomeModal
+        isOpen={isIncomeModalOpen}
+        onClose={() => setIsIncomeModalOpen(false)}
+        onSuccess={fetchAll}
+      />
+
+      <EditTransactionModal
+        isOpen={!!editingTransaction}
+        onClose={() => setEditingTransaction(null)}
+        onSuccess={() => {
+          setEditingTransaction(null);
+          fetchAll();
+        }}
+        transaction={editingTransaction}
       />
     </div>
   );
