@@ -119,18 +119,18 @@ export default function TransactionHistory({
               >
                 {/* Left: icon + info */}
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className={`p-2 rounded-lg flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-orange-50'}`}>
+                  <div className={`w-10 h-10 flex items-center justify-center rounded-lg flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
                     {isIncome ? (
                       <ArrowUpRight size={18} className="text-green-500" />
                     ) : (
-                      <ArrowDownLeft size={18} className="text-orange-400" />
+                      <ArrowDownLeft size={18} className="text-red-500" />
                     )}
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-gray-800 truncate">{t.description}</p>
                     <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      {/* Category badge */}
-                      {t.category_name && (
+                      {/* Category badge or Income badge */}
+                      {t.category_name ? (
                         <span
                           className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                             categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'
@@ -138,16 +138,18 @@ export default function TransactionHistory({
                         >
                           {t.category_name}
                         </span>
-                      )}
-                      {/* Income badge */}
-                      {isIncome && (
+                      ) : isIncome ? (
                         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
                           Income
                         </span>
-                      )}
-                      <span className="text-xs text-gray-400">{t.expense_date}</span>
+                      ) : null}
+                      <span className="text-xs font-medium text-gray-700">
+                        {new Date(t.expense_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      </span>
                       {t.payment_method && (
-                        <span className="text-xs text-gray-400">· {t.payment_method}</span>
+                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-900">
+                          {t.payment_method}
+                        </span>
                       )}
                     </div>
                   </div>
@@ -155,8 +157,8 @@ export default function TransactionHistory({
 
                 {/* Right: amount + menu */}
                 <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                  <p className={`text-sm font-bold ${isIncome ? 'text-green-600' : 'text-gray-800'}`}>
-                    {isIncome ? '+' : '-'}NRs {Number(t.amount).toLocaleString('en-IN')}
+                  <p className={`text-sm font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                    {isIncome ? '+' : '-'}NRs. {Number(t.amount).toLocaleString('en-IN')}
                   </p>
                   <ThreeDotMenu transaction={t} onEdit={onEdit} onDelete={onDelete} />
                 </div>

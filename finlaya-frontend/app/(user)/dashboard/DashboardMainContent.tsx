@@ -95,7 +95,41 @@ export default function DashboardMainContent() {
 
 
 
-  if (loading || isCheckingSetup) return null;
+  if (loading || isCheckingSetup) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 py-8 animate-pulse">
+          {/* Header Skeleton */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="h-8 w-48 bg-gray-200 rounded mb-3"></div>
+              <div className="h-4 w-72 bg-gray-200 rounded"></div>
+            </div>
+            <div className="h-12 w-36 bg-gray-200 rounded-lg"></div>
+          </div>
+
+          {/* Stats Cards Skeleton */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-28 bg-gray-200 rounded-xl"></div>
+            ))}
+          </div>
+
+          {/* Charts Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div className="h-72 bg-gray-200 rounded-xl"></div>
+            <div className="h-72 bg-gray-200 rounded-xl"></div>
+          </div>
+
+          {/* Bottom Section Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-64 bg-gray-200 rounded-xl"></div>
+            <div className="h-64 bg-gray-200 rounded-xl"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
   if (!user) return null;
 
   return (
@@ -108,9 +142,11 @@ export default function DashboardMainContent() {
               <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
             </div>
 
-            <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2">
-              <span className="text-xl">+</span>
-              Add Expense
+            <button
+              onClick={() => router.push('/expenses')}
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+            >
+              View Expenses
             </button>
           </div>
 
