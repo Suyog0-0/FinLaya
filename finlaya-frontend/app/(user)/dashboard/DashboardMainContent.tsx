@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import SalarySetupModal from '@/components/modals/SalarySetupModal';
+import OnboardingModal from '@/components/modals/onboarding/OnboardingModal';
 import StatsCard from '@/components/(user)/shared/StatsCard';
 import SpendingTrendChart from '@/components/(user)/dashboard/SpendingTrendChart';
 import CategoryBreakdownChart from '@/components/(user)/dashboard/CategoryBreakdownChart';
@@ -12,11 +12,14 @@ import RecentTransactions from '@/components/(user)/dashboard/RecentTransactions
 import { supabase } from '@/lib/supabase/client';
 import { useFinancialData } from '@/lib/hooks/useFinancialData';
 
+const SESSION_KEY = 'finlaya_setup_dismissed';
+
 export default function DashboardMainContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [showSalaryModal, setShowSalaryModal] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
+  const [dataVersion, setDataVersion] = useState(0);
 
   const { monthlySalary, monthlyExpenses, savings, totalBalance, isLoading, refetch } =
     useFinancialData();
@@ -28,108 +31,87 @@ export default function DashboardMainContent() {
   }, [user, loading, router]);
 
   useEffect(() => {
-    const checkUserSetup = async () => {
-      if (!user?.email) return;
+    const checkSetup = async () => {
+      if (!user?.id) return;
+
+      if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+        setIsCheckingSetup(false);
+        return;
+      }
 
       try {
+        const { data: cats } = await supabase
+          .from('budget_categories')
+          .select('category_id')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        const hasCategories = (cats ?? []).length > 0;
+
         const { data: userData } = await supabase
           .from('users')
           .select('monthly_salary')
           .eq('user_id', user.id)
           .single();
 
-        // Show modal if user exists but salary not set
-        if (!userData || !userData.monthly_salary || Number(userData.monthly_salary) === 0) {
-          setShowSalaryModal(true);
+        const hasSalary = userData?.monthly_salary && Number(userData.monthly_salary) > 0;
+
+        if (!hasCategories || !hasSalary) {
+          setShowOnboarding(true);
         }
       } catch {
-        setShowSalaryModal(true);
+        setShowOnboarding(true);
       } finally {
         setIsCheckingSetup(false);
       }
     };
 
     if (user) {
-      checkUserSetup();
+      checkSetup();
     }
   }, [user]);
 
-
-  const handleSalarySubmit = async (salary: number) => {
-    if (!user?.email) return;
-
-    try {
-      const categories = [
-        { name: 'Housing', percentage: 30, budget: salary * 0.3 },
-        { name: 'Food', percentage: 15, budget: salary * 0.15 },
-        { name: 'Transportation', percentage: 10, budget: salary * 0.1 },
-        { name: 'Utilities', percentage: 8, budget: salary * 0.08 },
-        { name: 'Health', percentage: 7, budget: salary * 0.07 },
-        { name: 'Entertainment', percentage: 5, budget: salary * 0.05 },
-        { name: 'Savings', percentage: 20, budget: salary * 0.2 },
-        { name: 'Others', percentage: 5, budget: salary * 0.05 },
-      ];
-
-      const { error } = await supabase
-        .from('users')
-        .update({
-          monthly_salary: salary,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('user_id', user.id)
-
-      if (error) {
-        console.error('Salary update error:', error);
-        return;
-      }
-
-      localStorage.setItem('default_categories', JSON.stringify(categories));
-      setShowSalaryModal(false);
-      refetch();
-    } catch (err) {
-      console.error('Error setting up salary:', err);
-    }
+  const handleDismiss = () => {
+    sessionStorage.setItem(SESSION_KEY, 'true');
+    setShowOnboarding(false);
   };
 
-
-
-
+  const handleComplete = () => {
+    sessionStorage.setItem(SESSION_KEY, 'true');
+    setShowOnboarding(false);
+    refetch();
+    setDataVersion((v) => v + 1);
+  };
 
   if (loading || isCheckingSetup) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8 animate-pulse">
-          {/* Header Skeleton */}
           <div className="flex items-center justify-between mb-8">
             <div>
-              <div className="h-8 w-48 bg-gray-200 rounded mb-3"></div>
-              <div className="h-4 w-72 bg-gray-200 rounded"></div>
+              <div className="h-8 w-48 bg-gray-200 rounded mb-3" />
+              <div className="h-4 w-72 bg-gray-200 rounded" />
             </div>
-            <div className="h-12 w-36 bg-gray-200 rounded-lg"></div>
+            <div className="h-12 w-36 bg-gray-200 rounded-lg" />
           </div>
-
-          {/* Stats Cards Skeleton */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-28 bg-gray-200 rounded-xl"></div>
+              <div key={i} className="h-28 bg-gray-200 rounded-xl" />
             ))}
           </div>
-
-          {/* Charts Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="h-72 bg-gray-200 rounded-xl"></div>
-            <div className="h-72 bg-gray-200 rounded-xl"></div>
+            <div className="h-72 bg-gray-200 rounded-xl" />
+            <div className="h-72 bg-gray-200 rounded-xl" />
           </div>
-
-          {/* Bottom Section Skeleton */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-64 bg-gray-200 rounded-xl"></div>
-            <div className="h-64 bg-gray-200 rounded-xl"></div>
+            <div className="h-64 bg-gray-200 rounded-xl" />
+            <div className="h-64 bg-gray-200 rounded-xl" />
           </div>
         </div>
       </div>
     );
   }
+
   if (!user) return null;
 
   return (
@@ -141,54 +123,37 @@ export default function DashboardMainContent() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
               <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
             </div>
-
             <button
               onClick={() => router.push('/expenses')}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
+              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all"
             >
               View Expenses
             </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatsCard
-              statId="balance"
-              totalBalance={totalBalance}
-              isLoading={isLoading}
-            />
-            <StatsCard
-              statId="income"
-              monthlySalary={monthlySalary}
-              isLoading={isLoading}
-            />
-            <StatsCard
-              statId="expenses"
-              monthlyExpenses={monthlyExpenses}
-              isLoading={isLoading}
-            />
-            <StatsCard
-              statId="savings"
-              savings={savings}
-              isLoading={isLoading}
-            />
+            <StatsCard statId="balance" totalBalance={totalBalance} isLoading={isLoading} />
+            <StatsCard statId="income" monthlySalary={monthlySalary} isLoading={isLoading} />
+            <StatsCard statId="expenses" monthlyExpenses={monthlyExpenses} isLoading={isLoading} />
+            <StatsCard statId="savings" savings={savings} isLoading={isLoading} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <SpendingTrendChart />
-            <CategoryBreakdownChart />
+            <SpendingTrendChart key={`trend-${dataVersion}`} />
+            <CategoryBreakdownChart key={`cat-${dataVersion}`} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <BudgetStatus />
-            <RecentTransactions />
+            <BudgetStatus key={`budget-${dataVersion}`} />
+            <RecentTransactions key={`recent-${dataVersion}`} />
           </div>
         </div>
       </div>
 
-      <SalarySetupModal
-        isOpen={showSalaryModal}
-        onClose={() => setShowSalaryModal(false)}
-        onSubmit={handleSalarySubmit}
+      <OnboardingModal
+        isOpen={showOnboarding}
+        onClose={handleDismiss}
+        onComplete={handleComplete}
       />
     </>
   );
