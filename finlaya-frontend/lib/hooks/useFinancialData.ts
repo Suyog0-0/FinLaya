@@ -23,30 +23,30 @@ export function useFinancialData(): FinancialData {
   const [trigger, setTrigger] = useState(0);
 
   useEffect(() => {
-    if (!user?.email) return;
+    if (!user?.id) return;
 
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
 
       try {
-        // Match user by email since auth uid != integer user_id
+        // Fetch user salary
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('user_id, monthly_salary')
+          .select('monthly_salary')
           .eq('user_id', user.id)
           .maybeSingle();
 
-
         if (userError || !userData) {
-            setError('User not found — please re-enter your salary');
-            setIsLoading(false);
-            return;
+          setError('User not found — please enter your salary');
+          setIsLoading(false);
+          return;
         }
 
-        setMonthlySalary(Number(userData.monthly_salary) || 0);
+        const salary = Number(userData.monthly_salary) || 0;
+        setMonthlySalary(salary);
 
-        // Current month expenses
+        // Get expenses for current month
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
           .toISOString()
@@ -58,7 +58,7 @@ export function useFinancialData(): FinancialData {
         const { data: expensesData, error: expensesError } = await supabase
           .from('expenses')
           .select('amount')
-          .eq('user_id', userData.user_id)
+          .eq('user_id', user.id)
           .gte('expense_date', monthStart)
           .lte('expense_date', monthEnd);
 
@@ -73,6 +73,7 @@ export function useFinancialData(): FinancialData {
           0
         );
         setMonthlyExpenses(totalExpenses);
+
       } catch {
         setError('Unexpected error');
       } finally {
@@ -81,11 +82,13 @@ export function useFinancialData(): FinancialData {
     };
 
     fetchData();
-  }, [user?.email, trigger]);
+  }, [user?.id, trigger]);
 
-  // savings = 20% of salary (matches modal default)
+  // Correct savings: 20% of salary
   const savings = monthlySalary * 0.2;
-  const totalBalance = monthlySalary + savings - monthlyExpenses;
+
+  // Correct total balance: salary - expenses + savings
+  const totalBalance = monthlySalary - monthlyExpenses + savings;
 
   return {
     monthlySalary,

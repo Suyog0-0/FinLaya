@@ -164,11 +164,11 @@ export default function CategoryBreakdownChart() {
         </div>
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-orange-400" />
+            <div className="w-3 h-3 rounded-sm bg-red-400" />
             <span className="text-gray-500">Spent</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-blue-200" />
+            <div className="w-3 h-3 rounded-sm bg-green-200" />
             <span className="text-gray-500">Budget</span>
           </div>
         </div>
@@ -201,13 +201,13 @@ export default function CategoryBreakdownChart() {
             />
             <Tooltip content={<CustomTooltip />} />
             {/* Budget limit bars (background) */}
-            <Bar dataKey="limit" name="limit" fill="#bfdbfe" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="limit" name="limit" fill="#bbf7d0" radius={[4, 4, 0, 0]} />
             {/* Spent bars (foreground) */}
             <Bar dataKey="spent" name="spent" radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={entry.overBudget ? '#ef4444' : '#f97316'}
+                  fill={entry.overBudget ? '#ef4444' : '#ef4444'}
                 />
               ))}
             </Bar>

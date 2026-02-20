@@ -147,13 +147,13 @@ export default function RecentTransactions() {
               <div className="flex items-center gap-3">
                 <div
                   className={`p-2 rounded-lg flex-shrink-0 ${
-                    t.type === 'income' ? 'bg-green-50' : 'bg-orange-50'
+                    t.type === 'income' ? 'bg-green-50' : 'bg-red-50'
                   }`}
                 >
-                  {t.type === 'income' ? (
-                    <ArrowDownLeft className="text-green-500" size={18} />
+                  {t.type === 'expense' ? (
+                    <ArrowDownLeft className="text-red-500" size={18} />
                   ) : (
-                    <ArrowUpRight className="text-orange-500" size={18} />
+                    <ArrowUpRight className="text-green-500" size={18} />
                   )}
                 </div>
                 <div>
@@ -165,10 +165,10 @@ export default function RecentTransactions() {
               </div>
               <p
                 className={`font-semibold text-sm ${
-                  t.type === 'income' ? 'text-green-600' : 'text-gray-800'
+                  t.type === 'income' ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {t.type === 'income' ? '+' : '-'}NRs {t.amount.toLocaleString('en-IN')}
+                {t.type === 'income' ? '+' : '-'}NRs. {t.amount.toLocaleString('en-IN')}
               </p>
             </div>
           ))}

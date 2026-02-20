@@ -142,42 +142,46 @@ export default function SpendingTrendChart() {
           <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
-          <AreaChart data={data} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#34d399" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#34d399" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
-                <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="month" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-            <YAxis tickFormatter={formatYAxis} stroke="#9ca3af" style={{ fontSize: '12px' }} width={40} />
-            <Tooltip content={<CustomTooltip />} />
-            <Area
-              type="monotone"
-              dataKey="income"
-              stroke="#34d399"
-              strokeWidth={2.5}
-              fill="url(#incomeGrad)"
-              dot={{ fill: '#34d399', strokeWidth: 0, r: 3 }}
-              activeDot={{ r: 5 }}
-            />
-            <Area
-              type="monotone"
-              dataKey="expenses"
-              stroke="#f97316"
-              strokeWidth={2.5}
-              fill="url(#expenseGrad)"
-              dot={{ fill: '#f97316', strokeWidth: 0, r: 3 }}
-              activeDot={{ r: 5 }}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+
+
+    <ResponsiveContainer width="100%" height={260}>
+      <AreaChart data={data} margin={{ top: 20, right: 4, left: 0, bottom: 0 }}>
+        <defs>
+          <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#34d399" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="#34d399" stopOpacity={0.02} />
+          </linearGradient>
+          <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
+            <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+        <XAxis dataKey="month" stroke="#9ca3af" style={{ fontSize: '12px' }} />
+        <YAxis tickFormatter={formatYAxis} stroke="#9ca3af" style={{ fontSize: '12px' }} width={40} />
+        <Tooltip content={<CustomTooltip />} />
+        <Area
+          type="monotone"
+          dataKey="income"
+          stroke="#34d399"
+          strokeWidth={2.5}
+          fill="url(#incomeGrad)"
+          dot={{ fill: '#34d399', strokeWidth: 0, r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+        <Area
+          type="monotone"
+          dataKey="expenses"
+          stroke="#f97316"
+          strokeWidth={2.5}
+          fill="url(#expenseGrad)"
+          dot={{ fill: '#f97316', strokeWidth: 0, r: 3 }}
+          activeDot={{ r: 5 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+
+
       )}
     </div>
   );
