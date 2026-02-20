@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import SalarySetupModal from '@/components/modals/SalarySetupModal';
-import StatsCard from '@/components/(user)/dashboard/StatsCard';
+import StatsCard from '@/components/(user)/shared/StatsCard';
 import SpendingTrendChart from '@/components/(user)/dashboard/SpendingTrendChart';
 import CategoryBreakdownChart from '@/components/(user)/dashboard/CategoryBreakdownChart';
 import BudgetStatus from '@/components/(user)/dashboard/BudgetStatus';
