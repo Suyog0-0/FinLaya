@@ -19,7 +19,6 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/categories", label: "Categories", icon: PieChart },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Navbar() {
@@ -29,11 +28,9 @@ export default function Navbar() {
   const router = useRouter();
   const { user, signOut } = useAuth();
 
-  // Get user's name or email
   const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
-  // Logout handler
   const handleLogout = async () => {
     await signOut();
     router.push("/login");
@@ -89,6 +86,7 @@ export default function Navbar() {
               {/* Dropdown */}
               {isDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200">
+                  {/* Profile */}
                   <Link
                     href={`/profile/${user?.id}`}
                     onClick={() => setIsDropdownOpen(false)}
@@ -97,7 +95,20 @@ export default function Navbar() {
                     <User size={16} />
                     <span>Profile</span>
                   </Link>
+
+                  {/*  Settings  */}
+                  <Link
+                    href="/settings"
+                    onClick={() => setIsDropdownOpen(false)}
+                    className="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100"
+                  >
+                    <Settings size={16} />
+                    <span>Settings</span>
+                  </Link>
+
                   <div className="border-t border-gray-200"></div>
+
+                  {/* Logout */}
                   <button
                     onClick={handleLogout}
                     className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 w-full rounded-b-lg cursor-pointer"
@@ -156,6 +167,7 @@ export default function Navbar() {
                 </div>
               </div>
 
+              {/* Profile */}
               <Link
                 href={`/profile/${user?.id}`}
                 onClick={() => setIsMenuOpen(false)}
@@ -163,6 +175,16 @@ export default function Navbar() {
               >
                 <User size={20} />
                 <span className="font-medium">Profile</span>
+              </Link>
+
+              {/* Settings */}
+              <Link
+                href="/settings"
+                onClick={() => setIsMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100"
+              >
+                <Settings size={20} />
+                <span className="font-medium">Settings</span>
               </Link>
 
               <button
