@@ -5,9 +5,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import OnboardingModalSalaryInput0 from './OnboardingModal-SalaryInput-0';
-import OnboardingModalCategorySetup1, { CategoryRow } from './OnboardingModal-CategorySetup-1';
-import OnboardingModalDone2 from './OnboardingModal-Success-2';
+import OnboardingModalSalaryInput0 from '../onboarding/OnboardingModal-SalaryInput-0';
+import OnboardingModalCategorySetup1, { CategoryRow } from '../onboarding/OnboardingModal-CategorySetup-1';
+import OnboardingModalDone2 from '../onboarding/OnboardingModal-Success-2';
+
 
 interface OnboardingModalProps {
   isOpen: boolean;
