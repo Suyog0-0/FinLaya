@@ -78,7 +78,7 @@ export default function ExpensesMainContent() {
     if (!user?.id) return;
     setIsLoading(true);
 
-    const [expResult, incResult, salaryResult] = await Promise.all([
+    const [expResult, incResult, salaryResult, budgetCatsResult] = await Promise.all([
       supabase
         .from('expenses')
         .select(`
@@ -104,6 +104,13 @@ export default function ExpensesMainContent() {
         .select('monthly_salary')
         .eq('user_id', user.id)
         .maybeSingle(),
+
+      // ✅ Fetch ALL budget categories the user set up (onboarding or manually added)
+      supabase
+        .from('budget_categories')
+        .select('category_name')
+        .eq('user_id', user.id)
+        .order('category_name', { ascending: true }),
     ]);
 
     const expenses: Transaction[] = ((expResult.data as ExpenseRecord[] | null) || []).map((e) => {
@@ -140,13 +147,24 @@ export default function ExpensesMainContent() {
       (a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
     );
 
-    const unique = Array.from(
-      new Set(all.map((t) => t.category_name).filter(Boolean))
-    ) as string[];
+    // ✅ Always show all budget categories the user has set up,
+    //    plus any income categories that appear in transactions.
+    //    Merge + deduplicate + sort alphabetically.
+    const budgetCategoryNames: string[] = (budgetCatsResult.data || []).map(
+      (c: { category_name: string }) => c.category_name
+    );
+
+    const transactionCategoryNames: string[] = all
+      .map((t) => t.category_name)
+      .filter(Boolean) as string[];
+
+    const mergedCategories = Array.from(
+      new Set([...budgetCategoryNames, ...transactionCategoryNames])
+    ).sort((a, b) => a.localeCompare(b));
 
     const salary = salaryResult.data ? Number(salaryResult.data.monthly_salary) : 0;
     setTransactions(all);
-    setCategories(['All', ...unique]);
+    setCategories(['All', ...mergedCategories]);
     setMonthlySalary(salary);
     setIsLoading(false);
   }, [user]);
@@ -193,7 +211,6 @@ export default function ExpensesMainContent() {
             <p className="text-gray-500 text-sm mt-0.5">Track your income and expenses</p>
           </div>
 
-          {/* Pill buttons */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsIncomeModalOpen(true)}
@@ -236,7 +253,7 @@ export default function ExpensesMainContent() {
           />
         </div>
 
-        {/* Search + Filter Component */}
+        {/* Search + Filter */}
         <SearchFilter
           search={search}
           setSearch={setSearch}
@@ -246,13 +263,13 @@ export default function ExpensesMainContent() {
         />
 
         {/* Transaction History */}
-      <TransactionHistory
-        filtered={filtered}
-        isLoading={isLoading}
-        categoryColors={categoryColors}
-        onEdit={(t) => setEditingTransaction(t)}
-        onDelete={handleDelete}
-      />  
+        <TransactionHistory
+          filtered={filtered}
+          isLoading={isLoading}
+          categoryColors={categoryColors}
+          onEdit={(t) => setEditingTransaction(t)}
+          onDelete={handleDelete}
+        />
       </div>
 
       <AddExpenseModal

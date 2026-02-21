@@ -30,7 +30,6 @@ export function useFinancialData(): FinancialData {
       setError(null);
 
       try {
-        // Fetch user salary
         const { data: userData, error: userError } = await supabase
           .from('users')
           .select('monthly_salary')
@@ -46,7 +45,6 @@ export function useFinancialData(): FinancialData {
         const salary = Number(userData.monthly_salary) || 0;
         setMonthlySalary(salary);
 
-        // Get expenses for current month
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
           .toISOString()
@@ -73,7 +71,6 @@ export function useFinancialData(): FinancialData {
           0
         );
         setMonthlyExpenses(totalExpenses);
-
       } catch {
         setError('Unexpected error');
       } finally {
@@ -84,11 +81,13 @@ export function useFinancialData(): FinancialData {
     fetchData();
   }, [user?.id, trigger]);
 
-  // Correct savings: 20% of salary
+  // Savings = 20% of salary — shown as a stat, but it's already
+  // part of salary, not additional money on top of it.
   const savings = monthlySalary * 0.2;
 
-  // Correct total balance: salary - expenses + savings
-  const totalBalance = monthlySalary - monthlyExpenses + savings;
+  // Total balance = salary minus expenses this month.
+  // Savings is NOT added here — it lives inside the salary figure already.
+  const totalBalance = monthlySalary - monthlyExpenses;
 
   return {
     monthlySalary,
