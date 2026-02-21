@@ -1,6 +1,3 @@
-// lib/api/client.ts
-// API client for making requests to your backend
-
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 interface ApiResponse<T = unknown> {
@@ -9,18 +6,21 @@ interface ApiResponse<T = unknown> {
   status: number;
 }
 
-/**
- * Generic API request function
- */
 async function apiRequest<T = unknown>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  token?: string  // optional JWT token for protected routes
 ): Promise<ApiResponse<T>> {
   const url = `${API_URL}${endpoint}`;
-  
-  const defaultHeaders = {
+
+  const defaultHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
   };
+
+  // Attach JWT if provided
+  if (token) {
+    defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
 
   try {
     const response = await fetch(url, {
@@ -47,14 +47,9 @@ async function apiRequest<T = unknown>(
   }
 }
 
-/**
- * API methods
- */
 export const api = {
-  // Health check
   health: () => apiRequest('/health'),
 
-  // Auth endpoints
   auth: {
     login: (email: string, password: string) =>
       apiRequest('/auth/login', {
@@ -67,13 +62,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ email, password, name }),
       }),
-  },
 
-  // adding more api methods here as more of the backend is built
-  // expenses: {
-  //   getAll: () => apiRequest('/expenses'),
-  //   create: (data) => apiRequest('/expenses', { method: 'POST', body: JSON.stringify(data) }),
-  // },
+    deleteAccount: (token: string) =>
+      apiRequest('/auth/delete-account', { method: 'DELETE' }, token),
+  },
 };
 
 export default api;

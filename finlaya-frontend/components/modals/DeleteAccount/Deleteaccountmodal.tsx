@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { X, TriangleAlert } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import api from '@/lib/api/client';
 
 interface DeleteAccountModalProps {
   isOpen: boolean;
@@ -21,51 +22,50 @@ export default function DeleteAccountModal({
 
   const canDelete = typed === 'DELETE';
 
-  const handleConfirm = async () => {
-    if (!canDelete) return;
-    setDeleting(true);
-    setError('');
 
-    try {
-      // Get current session access token
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData?.session?.access_token;
 
-      if (!accessToken) {
-        setError('No active session. Please log in again.');
-        setDeleting(false);
-        return;
-      }
+const handleConfirm = async () => {
+  if (!canDelete) return;
+  setDeleting(true);
+  setError('');
 
-      // Call Supabase REST API to delete the user account
-      // Requires "Allow users to delete their own accounts" enabled in
-      // Supabase Dashboard → Authentication → Settings
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+  try {
+    // Get the user's JWT token from Supabase session
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
 
-      const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          apikey: anonKey,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message || `Server error (${response.status})`);
-      }
-
-      // Sign out locally then tell parent to redirect
-      await supabase.auth.signOut();
-      onDeleted();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setError(`Could not delete account: ${msg}`);
+    if (!accessToken) {
+      setError('No active session. Please log in again.');
       setDeleting(false);
+      return;
     }
-  };
+
+    // Call our Express backend with the JWT token
+    const result = await api.auth.deleteAccount(accessToken);
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+
+    // Sign out locally then tell parent to redirect
+    await supabase.auth.signOut();
+    onDeleted();
+
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    setError(`Could not delete account: ${msg}`);
+    setDeleting(false);
+  }
+};
+
+
+
+
+
+
+
+
+
 
   const handleClose = () => {
     if (deleting) return;

@@ -40,47 +40,8 @@ app.get('/health', (req, res) => {
 });
 
 // Auth routes
-app.post('/auth/login', (req, res) => {
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    return res.status(400).json({ 
-      error: 'Email and password are required' 
-    });
-  }
-
-  // TODO: Implement actual authentication logic
-  console.log('Login attempt for:', email);
-  
-  res.json({ 
-    message: 'Login successful',
-    user: {
-      email: email,
-      // Add more user data after implementing auth
-    }
-  });
-});
-
-app.post('/auth/register', (req, res) => {
-  const { email, password, name } = req.body;
-  
-  if (!email || !password || !name) {
-    return res.status(400).json({ 
-      error: 'Email, password, and name are required' 
-    });
-  }
-
-  // TODO: Implement actual registration logic
-  console.log('Registration attempt for:', email, name);
-  
-  res.json({ 
-    message: 'Registration successful',
-    user: {
-      email: email,
-      name: name
-    }
-  });
-});
+const authRoutes = require('./routes/auth');
+app.use('/auth', authRoutes);
 
 // Test route to verify server is working
 app.get('/', (req, res) => {
