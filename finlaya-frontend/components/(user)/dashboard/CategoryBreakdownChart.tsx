@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import {
   BarChart,
   Bar,
@@ -41,17 +41,27 @@ const CustomTooltip = ({
       <div className="space-y-1">
         <div className="flex justify-between gap-6">
           <span className="text-gray-500">Spent</span>
-          <span className="font-semibold text-orange-600">NRs {spent.toLocaleString('en-IN')}</span>
+          <span className="font-semibold text-orange-600">
+            NRs {spent.toLocaleString('en-IN')}
+          </span>
         </div>
         {limit > 0 && (
           <div className="flex justify-between gap-6">
             <span className="text-gray-500">Budget</span>
-            <span className="font-semibold text-blue-600">NRs {limit.toLocaleString('en-IN')}</span>
+            <span className="font-semibold text-blue-600">
+              NRs {limit.toLocaleString('en-IN')}
+            </span>
           </div>
         )}
         {pct !== null && (
-          <div className={`text-xs mt-1 font-medium ${pct > 100 ? 'text-red-500' : 'text-green-600'}`}>
-            {pct > 100 ? `⚠ ${pct - 100}% over budget` : `${100 - pct}% remaining`}
+          <div
+            className={`text-xs mt-1 font-medium ${
+              pct > 100 ? 'text-red-500' : 'text-green-600'
+            }`}
+          >
+            {pct > 100
+              ? `⚠ ${pct - 100}% over budget`
+              : `${100 - pct}% remaining`}
           </div>
         )}
       </div>
@@ -59,83 +69,106 @@ const CustomTooltip = ({
   );
 };
 
+function truncateName(name: string, max = 9): string {
+  return name.length > max ? name.slice(0, max) + '…' : name;
+}
+
 export default function CategoryBreakdownChart() {
   const { user } = useAuth();
   const [data, setData] = useState<CategoryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchData = useCallback(async () => {
     if (!user?.id) return;
 
-    const fetchData = async () => {
-      setIsLoading(true);
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      .toISOString()
+      .split('T')[0];
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      .toISOString()
+      .split('T')[0];
 
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        .toISOString()
-        .split('T')[0];
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        .toISOString()
-        .split('T')[0];
+    const [catResult, expResult, userResult] = await Promise.all([
+      supabase
+        .from('budget_categories')
+        .select('category_id, category_name, budget_limit, allocation_percentage')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true }),
 
-      const [catResult, expResult, userResult] = await Promise.all([
-        supabase
-          .from('budget_categories')
-          .select('category_id, category_name, budget_limit, allocation_percentage')
-          .eq('user_id', user.id),
+      supabase
+        .from('expenses')
+        .select('amount, category_id')
+        .eq('user_id', user.id)
+        .gte('expense_date', monthStart)
+        .lte('expense_date', monthEnd),
 
-        supabase
-          .from('expenses')
-          .select('amount, category_id')
-          .eq('user_id', user.id)
-          .gte('expense_date', monthStart)
-          .lte('expense_date', monthEnd),
+      supabase
+        .from('users')
+        .select('monthly_salary')
+        .eq('user_id', user.id)
+        .maybeSingle(),
+    ]);
 
-        supabase
-          .from('users')
-          .select('monthly_salary')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-      ]);
+    const monthlySalary = userResult.data
+      ? Number(userResult.data.monthly_salary)
+      : 0;
+    const categories = catResult.data || [];
+    const expenses = expResult.data || [];
 
-      const monthlySalary = userResult.data ? Number(userResult.data.monthly_salary) : 0;
-      const categories = catResult.data || [];
-      const expenses = expResult.data || [];
+    const spentMap: Record<number, number> = {};
+    expenses.forEach((e) => {
+      if (e.category_id) {
+        spentMap[e.category_id] =
+          (spentMap[e.category_id] || 0) + Number(e.amount);
+      }
+    });
 
-      // Sum expenses per category_id
-      const spentMap: Record<number, number> = {};
-      expenses.forEach((e) => {
-        if (e.category_id) {
-          spentMap[e.category_id] = (spentMap[e.category_id] || 0) + Number(e.amount);
-        }
-      });
+    // Build a bar for EVERY budget category — including brand-new ones with 0 spending
+ 
+    const chartData: CategoryData[] = categories
+      .map((cat) => {
+        const spent = spentMap[cat.category_id] || 0;
+        const limit =
+          cat.budget_limit && Number(cat.budget_limit) > 0
+            ? Number(cat.budget_limit)
+            : monthlySalary * (Number(cat.allocation_percentage) / 100);
+        return {
+          name: cat.category_name,
+          spent: Math.round(spent),
+          limit: Math.round(limit),
+          overBudget: spent > limit && limit > 0,
+        };
+      })
+      .filter((d) => d.limit > 0 || d.spent > 0);
 
-      // Build chart data — only categories with activity or a limit set
-      const chartData: CategoryData[] = categories
-        .map((cat) => {
-          const spent = spentMap[cat.category_id] || 0;
-          // Use budget_limit if set, else fallback to salary * allocation_percentage
-          const limit =
-            cat.budget_limit && Number(cat.budget_limit) > 0
-              ? Number(cat.budget_limit)
-              : monthlySalary * (Number(cat.allocation_percentage) / 100);
-          return {
-            name: cat.category_name,
-            spent: Math.round(spent),
-            limit: Math.round(limit),
-            overBudget: spent > limit && limit > 0,
-          };
-        })
-        .filter((d) => d.spent > 0 || d.limit > 0) // only show relevant categories
-        .sort((a, b) => b.spent - a.spent)
-        .slice(0, 7); // max 7 bars for readability
+    setData(chartData);
+    setIsLoading(false);
+  }, [user]);
 
-      setData(chartData);
-      setIsLoading(false);
+  // Initial load
+  useEffect(() => {
+    (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
+
+  // Poll every 10 s — picks up categories added from the Categories page
+  // without needing a full page reload or shared global state
+  useEffect(() => {
+    const id = setInterval(fetchData, 10000);
+    return () => clearInterval(id);
+  }, [fetchData]);
+
+  // Re-fetch immediately when the user switches back to this tab
+  // (e.g. added a category on the Categories page then navigated back)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchData();
     };
-
-    fetchData();
-  }, [user?.id]);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [fetchData]);
 
   const formatValue = (value: number) => {
     if (value >= 100000) return `${(value / 100000).toFixed(1)}L`;
@@ -147,24 +180,31 @@ export default function CategoryBreakdownChart() {
     return (
       <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
         <h2 className="text-xl font-bold text-gray-900 mb-2">Category Breakdown</h2>
-        <p className="text-sm text-gray-500 mb-6">This month&apos;s spending vs budget</p>
+        <p className="text-sm text-gray-500 mb-6">
+          This month&apos;s spending vs budget
+        </p>
         <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
-          No expense data for this month yet
+          No budget categories set up yet
         </div>
       </div>
     );
   }
+
+  // Grow height so bars stay readable when there are many categories
+  const chartHeight = Math.max(260, data.length * 32);
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Category Breakdown</h2>
-          <p className="text-sm text-gray-500 mt-0.5">This month&apos;s spending vs budget</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            This month&apos;s spending vs budget
+          </p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-red-400" />
+            <div className="w-3 h-3 rounded-sm bg-orange-400" />
             <span className="text-gray-500">Spent</span>
           </div>
           <div className="flex items-center gap-1.5">
@@ -179,19 +219,24 @@ export default function CategoryBreakdownChart() {
           <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={260}>
+        <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart
             data={data}
             margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
             barCategoryGap="30%"
             barGap={3}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#f0f0f0"
+              vertical={false}
+            />
             <XAxis
               dataKey="name"
               stroke="#9ca3af"
               style={{ fontSize: '11px' }}
               tick={{ fill: '#6b7280' }}
+              tickFormatter={(v) => truncateName(v)}
             />
             <YAxis
               tickFormatter={formatValue}
@@ -200,14 +245,21 @@ export default function CategoryBreakdownChart() {
               width={38}
             />
             <Tooltip content={<CustomTooltip />} />
-            {/* Budget limit bars (background) */}
-            <Bar dataKey="limit" name="limit" fill="#bbf7d0" radius={[4, 4, 0, 0]} />
-            {/* Spent bars (foreground) */}
+
+            {/* Budget bars (background) */}
+            <Bar
+              dataKey="limit"
+              name="limit"
+              fill="#bbf7d0"
+              radius={[4, 4, 0, 0]}
+            />
+
+            {/* Spent bars (foreground) — orange normally, red if over budget */}
             <Bar dataKey="spent" name="spent" radius={[4, 4, 0, 0]}>
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={entry.overBudget ? '#ef4444' : '#ef4444'}
+                  fill={entry.overBudget ? '#ef4444' : '#f97316'}
                 />
               ))}
             </Bar>
