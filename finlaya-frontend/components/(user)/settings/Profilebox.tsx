@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
+import Image from 'next/image';
 import { User } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
+import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface ProfileBoxProps {
   fullName: string;
@@ -15,12 +17,37 @@ export default function ProfileBox({
   email,
   phone: initialPhone = '',
 }: ProfileBoxProps) {
+  const { user } = useAuth();
   const [fullName, setFullName] = useState(initialName);
   const [phone, setPhone] = useState(initialPhone);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // Get initials from name or email
+  // Avatar states
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [avatarMsg, setAvatarMsg] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch existing avatar when component loads
+  useState(() => {
+    const fetchAvatar = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    fetchAvatar();
+  });
+
+  // Get initials as fallback
   const displayName = fullName || email.split('@')[0] || 'U';
   const initials = displayName
     .split(' ')
@@ -29,6 +56,98 @@ export default function ProfileBox({
     .toUpperCase()
     .slice(0, 2);
 
+  // When user picks a file
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setAvatarMsg('Please select an image file.');
+      return;
+    }
+
+    // Validate file size (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setAvatarMsg('Image must be smaller than 2MB.');
+      return;
+    }
+
+    // Show preview
+    setSelectedFile(file);
+    setAvatarMsg('');
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // When user clicks Save Photo
+  const handleAvatarSave = async () => {
+    if (!selectedFile || !user?.id) return;
+
+    setUploadingAvatar(true);
+    setAvatarMsg('');
+
+    try {
+      // Create a unique file path: userId/avatar.jpg
+      const fileExt = selectedFile.name.split('.').pop();
+      const filePath = `${user.id}/avatar.${fileExt}`;
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, selectedFile, { upsert: true }); // upsert: true = overwrite if exists
+
+      if (uploadError) {
+        setAvatarMsg('Failed to upload image. Try again.');
+        setUploadingAvatar(false);
+        return;
+      }
+
+      // Get the public URL of the uploaded image
+      const { data: urlData } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const publicUrl = urlData.publicUrl;
+
+      // Save the URL to the users table
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq('user_id', user.id);
+
+      if (dbError) {
+        setAvatarMsg('Failed to save photo. Try again.');
+        setUploadingAvatar(false);
+        return;
+      }
+
+      // Update UI
+      setAvatarUrl(publicUrl);
+      setAvatarPreview(null);
+      setSelectedFile(null);
+      setAvatarMsg('Profile photo updated!');
+      setTimeout(() => setAvatarMsg(''), 3000);
+
+    } catch {
+      setAvatarMsg('Something went wrong. Try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  // Cancel preview
+  const handleCancelPreview = () => {
+    setAvatarPreview(null);
+    setSelectedFile(null);
+    setAvatarMsg('');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Save profile info (name, phone)
   const handleSave = async () => {
     setSaving(true);
     setMsg('');
@@ -44,6 +163,9 @@ export default function ProfileBox({
     }
   };
 
+  // Which image to show: preview > saved avatar > initials
+  const displayImage = avatarPreview || avatarUrl;
+
   return (
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
       {/* Section header */}
@@ -57,16 +179,80 @@ export default function ProfileBox({
         </div>
       </div>
 
-      {/* Avatar */}
+      {/* Avatar section */}
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-xl">
-          {initials}
+        {/* Avatar display */}
+        <div className="relative">
+          {displayImage ? (
+            <Image
+              src={displayImage}
+              alt="Profile"
+              width={64}
+              height={64}
+              className="rounded-full object-cover border-2 border-orange-200"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-xl">
+              {initials}
+            </div>
+          )}
+
+          {/* Preview badge */}
+          {avatarPreview && (
+            <span className="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+              Preview
+            </span>
+          )}
         </div>
+
+        {/* Upload controls */}
         <div>
-          <button className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors font-medium">
-            Change Photo
-          </button>
+          {/* Hidden file input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Change Photo button */}
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+            >
+              Change Photo
+            </button>
+
+            {/* Save Photo button - only shows after picking a file */}
+            {selectedFile && (
+              <>
+                <button
+                  onClick={handleAvatarSave}
+                  disabled={uploadingAvatar}
+                  className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-semibold hover:shadow-md transition-all disabled:opacity-50"
+                >
+                  {uploadingAvatar ? 'Saving...' : 'Save Photo'}
+                </button>
+                <button
+                  onClick={handleCancelPreview}
+                  className="px-4 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+
           <p className="text-xs text-gray-400 mt-1">JPG, PNG or GIF. Max 2MB.</p>
+
+          {/* Avatar message */}
+          {avatarMsg && (
+            <p className={`text-xs mt-1 font-medium ${avatarMsg.includes('updated') ? 'text-green-600' : 'text-red-500'}`}>
+              {avatarMsg}
+            </p>
+          )}
         </div>
       </div>
 

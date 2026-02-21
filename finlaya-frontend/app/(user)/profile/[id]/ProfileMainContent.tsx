@@ -1,12 +1,15 @@
 'use client';
 
+import Image from 'next/image';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 export default function ProfileMainContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -14,10 +17,25 @@ export default function ProfileMainContent() {
     }
   }, [user, loading, router]);
 
+  // Fetch avatar from users table
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('users')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    fetchAvatar();
+  }, [user?.id]);
+
   if (loading) return null;
   if (!user) return null;
 
-  // Extract user information
   const userName = user.user_metadata?.full_name || 'Not provided';
   const userEmail = user.email || 'Not provided';
   const createdAt = user.created_at 
@@ -37,7 +55,7 @@ export default function ProfileMainContent() {
       })
     : 'Not available';
 
-  // Get initials for avatar
+  // Initials as fallback
   const userInitials = userName
     .split(' ')
     .map((n: string) => n[0])
@@ -58,9 +76,22 @@ export default function ProfileMainContent() {
         <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-100">
           {/* Avatar Section */}
           <div className="flex flex-col items-center mb-8">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-3xl mb-4">
-              {userInitials}
-            </div>
+
+            {/* Show photo if exists, otherwise show initials */}
+            {avatarUrl ? (
+              <Image
+                src={avatarUrl}
+                alt="Profile"
+                width={96}
+                height={96}
+                className="w-24 h-24 rounded-full object-cover border-4 border-orange-200 mb-4"
+              />
+            ) : (
+              <div className="w-24 h-24 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-3xl mb-4">
+                {userInitials}
+              </div>
+            )}
+
             <h2 className="text-2xl font-bold text-gray-900">{userName}</h2>
             <p className="text-gray-500 mt-1">{userEmail}</p>
           </div>
@@ -71,7 +102,6 @@ export default function ProfileMainContent() {
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Details</h3>
               
               <div className="space-y-4">
-                {/* Full Name */}
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Full Name</p>
@@ -79,7 +109,6 @@ export default function ProfileMainContent() {
                   </div>
                 </div>
 
-                {/* Email */}
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Email Address</p>
@@ -87,7 +116,6 @@ export default function ProfileMainContent() {
                   </div>
                 </div>
 
-                {/* User ID */}
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-medium text-gray-500">User ID</p>
@@ -95,7 +123,6 @@ export default function ProfileMainContent() {
                   </div>
                 </div>
 
-                {/* Account Created */}
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Account Created</p>
@@ -103,7 +130,6 @@ export default function ProfileMainContent() {
                   </div>
                 </div>
 
-                {/* Last Sign In */}
                 <div className="flex justify-between items-start">
                   <div>
                     <p className="text-sm font-medium text-gray-500">Last Sign In</p>
