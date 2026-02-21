@@ -118,13 +118,6 @@ export default function ProfileMainContent() {
 
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className="text-sm font-medium text-gray-500">User ID</p>
-                    <p className="text-gray-900 mt-1 font-mono text-sm">{user.id}</p>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-start">
-                  <div>
                     <p className="text-sm font-medium text-gray-500">Account Created</p>
                     <p className="text-gray-900 mt-1">{createdAt}</p>
                   </div>

@@ -14,8 +14,10 @@ import {
   LogOut, 
   Menu, 
   X,
-  User
+  User,
+  ChevronDown
 } from "lucide-react";
+import { motion } from "framer-motion";
 
 const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -117,12 +119,23 @@ export default function Navbar() {
                 className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100"
               >
                 <AvatarCircle avatarUrl={avatarUrl} initials={userInitials} size="sm" />
-                <span className="text-sm font-medium text-gray-700">{userName}</span>
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                    {userName} <motion.span animate={{ rotate: isDropdownOpen ? 180 : 0 }} transition={{ duration: 0.3 }}><ChevronDown size={14} /></motion.span>
+                  </span>
+                  <span className="text-xs text-gray-500">{user?.email}</span>
+                </div>
               </button>
 
               {/* Dropdown */}
               {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200">
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200"
+                >
                   {/* Profile */}
                   <Link
                     href={`/profile/${user?.id}`}
@@ -153,7 +166,7 @@ export default function Navbar() {
                     <LogOut size={16} />
                     <span>Logout</span>
                   </button>
-                </div>
+                </motion.div>
               )}
             </div>
 
@@ -196,7 +209,7 @@ export default function Navbar() {
                 <AvatarCircle avatarUrl={avatarUrl} initials={userInitials} size="lg" />
                 <div>
                   <p className="font-medium text-gray-900">{userName}</p>
-                  <p className="text-sm text-gray-500">{user?.email}</p>
+                  <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
               </div>
 
