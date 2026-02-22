@@ -10,12 +10,15 @@ import {
   LayoutDashboard, 
   Receipt, 
   PieChart, 
-  Settings, 
+  Settings,    
   LogOut, 
   Menu, 
   X,
   User,
-  ChevronDown
+  ChevronDown,
+  Target,
+  CreditCard,
+  BarChart2
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -23,6 +26,9 @@ const navLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/categories", label: "Categories", icon: PieChart },
+  { href: "/goals", label: "Goals", icon: Target },
+  { href: "/emi-loan", label: "EMI/Loan System", icon: CreditCard },
+  { href: "/reports", label: "Reports", icon: BarChart2 },
 ];
 
 const AvatarCircle = ({ avatarUrl, initials, size = 'sm' }: { avatarUrl: string | null; initials: string; size?: 'sm' | 'lg' }) => {
@@ -35,12 +41,12 @@ const AvatarCircle = ({ avatarUrl, initials, size = 'sm' }: { avatarUrl: string 
         alt="Profile"
         width={sizePixels}
         height={sizePixels}
-        className={`${dimension} rounded-full object-cover border-2 border-orange-200`}
+        className={`${dimension} rounded-full object-cover border-2 border-orange-300`}
       />
     );
   }
   return (
-    <div className={`${dimension} rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white font-semibold`}>
+    <div className={`${dimension} rounded-full bg-orange-600 flex items-center justify-center text-white font-semibold`}>
       {initials}
     </div>
   );
@@ -84,12 +90,12 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           
           {/* Logo */}
-          <Link href="/dashboard" className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent">
+          <Link href="/dashboard" className="text-2xl font-bold text-orange-600">
             FinLaya
           </Link>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-2">
+          <div className="hidden md:flex items-center space-x-6">
             {navLinks.map((link) => {
               const Icon = link.icon;
               const isActive = pathname === link.href;
@@ -97,14 +103,14 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center px-1 py-2 border-b-2 transition-all duration-300 ${
                     isActive 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' 
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'border-orange-500 text-orange-600 font-semibold' 
+                      : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
                   }`}
                 >
                   <Icon size={18} />
-                  <span className="font-medium">{link.label}</span>
+                  <span className="ml-2 font-medium">{link.label}</span>
                 </Link>
               );
             })}
@@ -161,7 +167,7 @@ export default function Navbar() {
                   {/* Logout */}
                   <button
                     onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 w-full rounded-b-lg cursor-pointer"
+                    className="flex items-center gap-2 px-4 py-3 text-orange-600 hover:bg-orange-50 w-full rounded-b-lg cursor-pointer"
                   >
                     <LogOut size={16} />
                     <span>Logout</span>
@@ -191,14 +197,14 @@ export default function Navbar() {
                   key={link.href}
                   href={link.href}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
+                  className={`flex items-center px-1 py-2 border-b-2 transition-all duration-300 ${
                     isActive 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' 
-                      : 'text-gray-600 hover:bg-gray-100'
+                      ? 'border-orange-500 text-orange-600 font-semibold' 
+                      : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
                   }`}
                 >
                   <Icon size={20} />
-                  <span className="font-medium">{link.label}</span>
+                  <span className="ml-2 font-medium">{link.label}</span>
                 </Link>
               );
             })}
@@ -233,7 +239,7 @@ export default function Navbar() {
 
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 w-full cursor-pointer"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-orange-600 hover:bg-orange-50 w-full cursor-pointer"
               >
                 <LogOut size={20} />
                 <span className="font-medium">Logout</span>

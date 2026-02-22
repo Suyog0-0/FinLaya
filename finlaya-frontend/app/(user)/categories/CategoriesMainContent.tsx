@@ -227,7 +227,7 @@ export default function CategoriesMainContent() {
               setShowAddCard(true);
               window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm shadow-md transition-all"
           >
             <Plus size={16} />
             Add Category
