@@ -207,35 +207,46 @@ export default function ExpensesMainContent() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+
+        {/* Header  */}
+        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
-            <p className="text-gray-500 text-sm mt-0.5">Track your income and expenses</p>
+            <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
+              Transactions
+              {filtered.length > 0 && (
+                <span className="text-xs font-semibold text-gray-700 bg-gray-200 px-2.5 py-1 rounded-full border border-gray-300">
+                  {filtered.length}
+                </span>
+              )}
+            </h1>
+            <p className="text-gray-500 text-sm mt-1.5">Track your income and expenses</p>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsIncomeModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-emerald-500 text-emerald-600 font-semibold text-sm bg-white hover:bg-emerald-50 transition-all shadow-sm hover:shadow-md"
+              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-500 text-white font-semibold text-sm shadow-md shadow-emerald-200/40 hover:bg-emerald-600 hover:shadow-emerald-300/50 active:scale-[0.98] transition-all duration-200"
             >
-              <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center flex-shrink-0">
-                <TrendingUp size={11} className="text-white" />
+              <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+                <TrendingUp size={13} className="text-white" strokeWidth={2.5} />
               </div>
-              Add Income
+              <span className="text-white">Add Income</span>
             </button>
 
             <button
               onClick={() => setIsExpenseModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full border-2 border-red-500 text-red-600 font-semibold text-sm bg-white hover:bg-red-50 transition-all shadow-sm hover:shadow-md"
+              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-red-500 text-white font-semibold text-sm shadow-md shadow-red-200/40 hover:bg-red-600 hover:shadow-red-300/50 active:scale-[0.98] transition-all duration-200"
             >
-              <div className="w-5 h-5 rounded-full bg-red-500 flex items-center justify-center flex-shrink-0">
-                <TrendingDown size={11} className="text-white" />
+              <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+                <TrendingDown size={13} className="text-white" strokeWidth={2.5} />
               </div>
-              Add Expense
+              <span className="text-white">Add Expense</span>
             </button>
           </div>
         </div>
+
+
+
 
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">

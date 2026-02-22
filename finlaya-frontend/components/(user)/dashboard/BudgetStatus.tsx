@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Target, AlertCircle, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -26,10 +27,23 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const DEFAULT_COLOR = 'bg-indigo-400';
 
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+];
+
 export default function BudgetStatus() {
   const { user } = useAuth();
   const [items, setItems] = useState<BudgetItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Date filter state
+  const now = new Date();
+  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
+  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
+  
+  // Generate last 5 years for dropdown
+  const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -37,11 +51,10 @@ export default function BudgetStatus() {
     const fetchData = async () => {
       setIsLoading(true);
 
-      const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+      const monthStart = new Date(selectedYear, selectedMonth, 1)
         .toISOString()
         .split('T')[0];
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const monthEnd = new Date(selectedYear, selectedMonth + 1, 0)
         .toISOString()
         .split('T')[0];
 
@@ -69,7 +82,6 @@ export default function BudgetStatus() {
       const categories = catResult.data || [];
       const expenses = expResult.data || [];
 
-      // Sum expenses per category
       const spentMap: Record<number, number> = {};
       expenses.forEach((e) => {
         if (e.category_id) {
@@ -92,15 +104,15 @@ export default function BudgetStatus() {
             color: CATEGORY_COLORS[cat.category_name] || DEFAULT_COLOR,
           };
         })
-        .filter((item) => item.budget > 0) // only show categories with a budget
-        .sort((a, b) => b.spent / (b.budget || 1) - a.spent / (a.budget || 1)); // sort by usage %
+        .filter((item) => item.budget > 0)
+        .sort((a, b) => b.spent / (b.budget || 1) - a.spent / (a.budget || 1));
 
       setItems(budgetItems);
       setIsLoading(false);
     };
 
     fetchData();
-  }, [user?.id]);
+  }, [user?.id, selectedMonth, selectedYear]);
 
   const getPercentage = (spent: number, budget: number) => {
     if (budget === 0) return 0;
@@ -114,18 +126,30 @@ export default function BudgetStatus() {
     return defaultColor;
   };
 
+  const getPeriodLabel = () => {
+    const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
+    if (isCurrentMonth) return 'This month';
+    return `${MONTHS[selectedMonth]} ${selectedYear}`;
+  };
+
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100 animate-pulse">
-        <div className="h-6 w-32 bg-gray-200 rounded mb-6" />
-        <div className="space-y-5">
-          {[...Array(5)].map((_, i) => (
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100 animate-pulse">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gray-200" />
+            <div className="h-5 w-28 bg-gray-200 rounded" />
+          </div>
+          <div className="h-8 w-32 bg-gray-200 rounded-lg" />
+        </div>
+        <div className="space-y-4">
+          {[...Array(4)].map((_, i) => (
             <div key={i}>
               <div className="flex justify-between mb-2">
+                <div className="h-4 w-20 bg-gray-200 rounded" />
                 <div className="h-4 w-24 bg-gray-200 rounded" />
-                <div className="h-4 w-32 bg-gray-200 rounded" />
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2" />
+              <div className="w-full bg-gray-100 rounded-full h-2.5" />
             </div>
           ))}
         </div>
@@ -133,60 +157,120 @@ export default function BudgetStatus() {
     );
   }
 
-  if (items.length === 0) {
-    return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Budget Status</h2>
-        <p className="text-sm text-gray-400 text-center py-8">No budget categories set up yet.</p>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Budget Status</h2>
-        <span className="text-xs text-gray-400">This month</span>
+    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+      {/* Header with Filter */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100">
+            <Target size={16} className="text-amber-500" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Budget Status</h2>
+        </div>
+
+        {/* Month/Year Filter */}
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(Number(e.target.value))}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 cursor-pointer hover:border-gray-300 transition-colors"
+          >
+            {MONTHS.map((month, index) => (
+              <option key={month} value={index}>
+                {month}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="px-3 py-1.5 text-sm border border-gray-200 rounded-lg bg-white text-gray-700 font-medium focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-amber-400 cursor-pointer hover:border-gray-300 transition-colors"
+          >
+            {years.map((year) => (
+              <option key={year} value={year}>
+                {year}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <div className="space-y-5">
-        {items.map((item, index) => {
-          const pct = getPercentage(item.spent, item.budget);
-          const barColor = getBarColor(item.spent, item.budget, item.color);
-          const isOver = item.spent > item.budget;
+      {/* Period Badge */}
+      <div className="mb-5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+          <Calendar size={14} className="text-amber-600" />
+          <span className="text-sm font-semibold text-amber-700">
+            {getPeriodLabel()}
+          </span>
+        </div>
+      </div>
 
-          return (
-            <div key={index}>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-700">{item.category}</span>
-                  {isOver && (
-                    <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-medium">
-                      Over
-                    </span>
-                  )}
+      {/* Budget Items */}
+      {items.length === 0 ? (
+        <div className="text-center py-8">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <Target size={20} className="text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-sm font-medium">No expenses this period</p>
+          <p className="text-gray-400 text-xs mt-1">Start adding expenses to see your budget</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item, index) => {
+            const pct = getPercentage(item.spent, item.budget);
+            const barColor = getBarColor(item.spent, item.budget, item.color);
+            const isOver = item.spent > item.budget;
+            const isNearLimit = pct >= 80 && pct < 100;
+
+            return (
+              <div key={index} className="group">
+                {/* Category Row */}
+                <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                    <span className="text-sm font-medium text-gray-700">{item.category}</span>
+                    {isOver && (
+                      <span className="flex items-center gap-1 text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-medium border border-red-100">
+                        <AlertCircle size={10} />
+                        Over
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-xs text-gray-500 tabular-nums">
+                    NRs {item.spent.toLocaleString('en-IN')} / {item.budget.toLocaleString('en-IN')}
+                  </span>
                 </div>
-                <span className="text-xs text-gray-500">
-                  NRs {item.spent.toLocaleString('en-IN')} / NRs {item.budget.toLocaleString('en-IN')}
-                </span>
+
+                {/* Progress Bar */}
+                <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                  <div
+                    className={`h-full ${barColor} rounded-full transition-all duration-500 ease-out ${
+                      isOver ? 'animate-pulse' : ''
+                    }`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+
+                {/* Helper Text */}
+                <div className="flex justify-end mt-1">
+                  <span
+                    className={`text-xs font-medium ${
+                      isOver ? 'text-red-500' : isNearLimit ? 'text-amber-500' : 'text-gray-400'
+                    }`}
+                  >
+                    {isOver
+                      ? `⚠ ${Math.round(((item.spent - item.budget) / item.budget) * 100)}% over`
+                      : isNearLimit
+                      ? `⚡ ${Math.round(100 - pct)}% left`
+                      : `${Math.round(100 - pct)}% remaining`}
+                  </span>
+                </div>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                <div
-                  className={`h-full ${barColor} transition-all duration-500 rounded-full`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <div className="flex justify-end mt-0.5">
-                <span className={`text-xs ${isOver ? 'text-red-500' : 'text-gray-400'}`}>
-                  {isOver
-                    ? `${Math.round(((item.spent - item.budget) / item.budget) * 100)}% over`
-                    : `${Math.round(100 - pct)}% left`}
-                </span>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

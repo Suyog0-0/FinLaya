@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Calendar, CreditCard } from 'lucide-react';
 
 interface Transaction {
   expense_id: number;
@@ -52,31 +52,32 @@ function ThreeDotMenu({
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
       >
         <MoreVertical size={16} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-8 z-20 w-36 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+        <div className="absolute right-0 top-10 z-20 w-40 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               onEdit(transaction);
             }}
-            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+            className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
           >
             <Pencil size={14} />
             Edit
           </button>
+          <div className="h-px bg-gray-100 mx-4" />
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               onDelete(transaction.expense_id, transaction.type);
             }}
-            className="flex items-center gap-2.5 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
             <Trash2 size={14} />
             Delete
@@ -95,59 +96,81 @@ export default function TransactionHistory({
   onDelete,
 }: TransactionHistoryProps) {
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
-      <h2 className="text-base font-bold text-gray-900 mb-4">Transaction History</h2>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg font-bold text-gray-900">Transaction History</h2>
+        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+          {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
+        </span>
+      </div>
 
       {isLoading ? (
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 rounded-xl bg-gray-100 animate-pulse" />
+            <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100">
+              <div className="w-10 h-10 rounded-lg bg-gray-100 animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
+                <div className="h-3 w-24 bg-gray-50 rounded animate-pulse" />
+              </div>
+              <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
+            </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-12 text-gray-400 text-sm">
-          No transactions found
+        <div className="text-center py-16">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+            <ArrowDownLeft size={24} className="text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-sm font-medium">No transactions found</p>
+          <p className="text-gray-400 text-xs mt-1">Start adding your expenses and income</p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {filtered.map((t) => {
             const isIncome = t.type === 'income';
             return (
               <div
                 key={`${t.type}-${t.expense_id}`}
-                className="flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors group"
+                className="group flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:bg-gray-50 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
               >
                 {/* Left: icon + info */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-10 h-10 flex items-center justify-center rounded-lg flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className={`w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
                     {isIncome ? (
-                      <ArrowUpRight size={18} className="text-green-500" />
+                      <ArrowUpRight size={18} className="text-green-600" />
                     ) : (
-                      <ArrowDownLeft size={18} className="text-red-500" />
+                      <ArrowDownLeft size={18} className="text-red-600" />
                     )}
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-800 truncate">{t.description}</p>
-                    <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                      {/* Category badge or Income badge */}
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {/* Category badge */}
                       {t.category_name ? (
                         <span
-                          className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          className={`text-xs px-2 py-0.5 rounded-md font-medium ${
                             categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'
                           }`}
                         >
                           {t.category_name}
                         </span>
                       ) : isIncome ? (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-green-100 text-green-700">
+                        <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-green-100 text-green-700">
                           Income
                         </span>
                       ) : null}
-                      <span className="text-xs font-medium text-gray-700">
-                        {new Date(t.expense_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                      
+                      {/* Date */}
+                      <span className="flex items-center gap-1 text-xs text-gray-500">
+                        <Calendar size={12} />
+                        {new Date(t.expense_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
+                      
+                      {/* Payment Method */}
                       {t.payment_method && (
-                        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-100 text-blue-900">
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md font-medium bg-gray-100 text-gray-600">
+                          <CreditCard size={12} />
                           {t.payment_method}
                         </span>
                       )}
@@ -156,9 +179,9 @@ export default function TransactionHistory({
                 </div>
 
                 {/* Right: amount + menu */}
-                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                  <p className={`text-sm font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                    {isIncome ? '+' : '-'}NRs. {Number(t.amount).toLocaleString('en-IN')}
+                <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                  <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
+                    {isIncome ? '+' : '-'}NRs {Number(t.amount).toLocaleString('en-IN')}
                   </p>
                   <ThreeDotMenu transaction={t} onEdit={onEdit} onDelete={onDelete} />
                 </div>

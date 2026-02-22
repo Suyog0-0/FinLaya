@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
-import { User } from 'lucide-react';
+import { User, Mail, Phone, Camera, X, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -32,7 +32,7 @@ export default function ProfileBox({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch existing avatar when component loads
-  useState(() => {
+  useEffect(() => {
     const fetchAvatar = async () => {
       if (!user?.id) return;
       const { data } = await supabase
@@ -45,10 +45,10 @@ export default function ProfileBox({
       }
     };
     fetchAvatar();
-  });
+  }, [user?.id]);
 
   // Get initials as fallback
-  const displayName = fullName || email.split('@')[0] || 'U';
+  const displayName = fullName || email.split('@')[0] || 'User';
   const initials = displayName
     .split(' ')
     .map((n: string) => n[0])
@@ -61,19 +61,16 @@ export default function ProfileBox({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.startsWith('image/')) {
       setAvatarMsg('Please select an image file.');
       return;
     }
 
-    // Validate file size (2MB)
     if (file.size > 2 * 1024 * 1024) {
       setAvatarMsg('Image must be smaller than 2MB.');
       return;
     }
 
-    // Show preview
     setSelectedFile(file);
     setAvatarMsg('');
     const reader = new FileReader();
@@ -91,14 +88,12 @@ export default function ProfileBox({
     setAvatarMsg('');
 
     try {
-      // Create a unique file path: userId/avatar.jpg
       const fileExt = selectedFile.name.split('.').pop();
       const filePath = `${user.id}/avatar.${fileExt}`;
 
-      // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, selectedFile, { upsert: true }); // upsert: true = overwrite if exists
+        .upload(filePath, selectedFile, { upsert: true });
 
       if (uploadError) {
         setAvatarMsg('Failed to upload image. Try again.');
@@ -106,14 +101,12 @@ export default function ProfileBox({
         return;
       }
 
-      // Get the public URL of the uploaded image
       const { data: urlData } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
 
       const publicUrl = urlData.publicUrl;
 
-      // Save the URL to the users table
       const { error: dbError } = await supabase
         .from('users')
         .update({ avatar_url: publicUrl, updated_at: new Date().toISOString() })
@@ -125,7 +118,6 @@ export default function ProfileBox({
         return;
       }
 
-      // Update UI
       setAvatarUrl(publicUrl);
       setAvatarPreview(null);
       setSelectedFile(null);
@@ -163,93 +155,112 @@ export default function ProfileBox({
     }
   };
 
-  // Which image to show: preview > saved avatar > initials
   const displayImage = avatarPreview || avatarUrl;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-200">
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       {/* Section header */}
-      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-          <User size={16} className="text-orange-500" />
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
+        <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+          <User size={18} className="text-orange-500" />
         </div>
         <div>
-          <p className="font-semibold text-gray-900">Profile</p>
-          <p className="text-xs text-gray-400">Update your personal information</p>
+          <p className="font-semibold text-gray-900">Profile Settings</p>
+          <p className="text-xs text-gray-400 mt-0.5">Update your personal information</p>
         </div>
       </div>
 
       {/* Avatar section */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-5 mb-7 pb-6 border-b border-gray-100">
         {/* Avatar display */}
-        <div className="relative">
+        <div className="relative group">
           {displayImage ? (
-            <Image
-              src={displayImage}
-              alt="Profile"
-              width={64}
-              height={64}
-              className="rounded-full object-cover border-2 border-orange-200"
-            />
+            <div className="relative">
+              <Image
+                src={displayImage}
+                alt="Profile"
+                width={72}
+                height={72}
+                className="rounded-full object-cover border-2 border-orange-200"
+              />
+              {/* Hover overlay for desktop */}
+              <label 
+                htmlFor="avatar-upload" 
+                className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+              >
+                <Camera size={20} className="text-white" />
+              </label>
+            </div>
           ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center text-white font-bold text-xl">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
               {initials}
             </div>
           )}
 
           {/* Preview badge */}
           {avatarPreview && (
-            <span className="absolute -bottom-1 -right-1 bg-orange-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-              Preview
+            <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium shadow-sm">
+              New
             </span>
           )}
-        </div>
 
-        {/* Upload controls */}
-        <div>
           {/* Hidden file input */}
           <input
+            id="avatar-upload"
             ref={fileInputRef}
             type="file"
             accept="image/*"
             onChange={handleFileChange}
             className="hidden"
           />
+        </div>
 
+        {/* Upload controls */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-gray-900 mb-2">Profile Photo</p>
+          
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Change Photo button */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition-colors font-medium"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all font-medium"
             >
-              Change Photo
+              <Camera size={14} />
+              Change
             </button>
 
-            {/* Save Photo button - only shows after picking a file */}
             {selectedFile && (
               <>
                 <button
                   onClick={handleAvatarSave}
                   disabled={uploadingAvatar}
-                  className="px-4 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-semibold hover:shadow-md transition-all disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50"
                 >
-                  {uploadingAvatar ? 'Saving...' : 'Save Photo'}
+                  {uploadingAvatar ? (
+                    <span className="w-3.5 h-3.5 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Check size={14} />
+                  )}
+                  Save
                 </button>
                 <button
                   onClick={handleCancelPreview}
-                  className="px-4 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
                 >
+                  <X size={14} />
                   Cancel
                 </button>
               </>
             )}
           </div>
 
-          <p className="text-xs text-gray-400 mt-1">JPG, PNG or GIF. Max 2MB.</p>
+          <p className="text-xs text-gray-400 mt-2">JPG, PNG or GIF. Max 2MB.</p>
 
           {/* Avatar message */}
           {avatarMsg && (
-            <p className={`text-xs mt-1 font-medium ${avatarMsg.includes('updated') ? 'text-green-600' : 'text-red-500'}`}>
+            <p className={`text-xs mt-2 font-medium flex items-center gap-1 ${
+              avatarMsg.includes('updated') ? 'text-green-600' : 'text-red-500'
+            }`}>
+              {avatarMsg.includes('updated') ? <Check size={12} /> : <X size={12} />}
               {avatarMsg}
             </p>
           )}
@@ -257,34 +268,38 @@ export default function ProfileBox({
       </div>
 
       {/* Name + Email */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
+            <User size={14} className="text-gray-400" />
             Full Name
           </label>
           <input
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 focus:bg-white bg-gray-50 transition-all"
+            placeholder="Enter your name"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
+            <Mail size={14} className="text-gray-400" />
             Email
           </label>
           <input
             type="email"
             value={email}
             disabled
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 bg-gray-50 cursor-not-allowed"
           />
         </div>
       </div>
 
       {/* Phone */}
-      <div className="mb-5">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="mb-6">
+        <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
+          <Phone size={14} className="text-gray-400" />
           Phone Number
         </label>
         <input
@@ -292,25 +307,37 @@ export default function ProfileBox({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+977 98XXXXXXXX"
-          className="w-full sm:w-1/2 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-orange-400 focus:border-transparent"
+          className="w-full sm:w-80 px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 focus:bg-white bg-gray-50 transition-all"
         />
       </div>
 
-      <div className="flex items-center justify-between">
+      {/* Save button + message */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-gray-100">
         {msg && (
-          <p className={`text-sm font-medium ${msg.includes('Failed') ? 'text-red-500' : 'text-green-600'}`}>
+          <p className={`text-sm font-medium flex items-center gap-1.5 ${
+            msg.includes('Failed') ? 'text-red-500' : 'text-green-600'
+          }`}>
+            {msg.includes('Failed') ? <X size={14} /> : <Check size={14} />}
             {msg}
           </p>
         )}
-        <div className="ml-auto">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg text-sm font-semibold hover:shadow-md transition-all disabled:opacity-50"
-          >
-            {saving ? 'Saving…' : 'Save Changes'}
-          </button>
-        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="sm:ml-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold hover:from-amber-600 hover:to-orange-600 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {saving ? (
+            <>
+              <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+              Saving…
+            </>
+          ) : (
+            <>
+              <Check size={14} />
+              Save Changes
+            </>
+          )}
+        </button>
       </div>
     </div>
   );

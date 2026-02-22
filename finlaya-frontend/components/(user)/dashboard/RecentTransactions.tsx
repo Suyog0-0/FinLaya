@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { ArrowUpRight, ArrowDownLeft, Clock } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -98,7 +98,6 @@ export default function RecentTransactions() {
         type: 'income' as const,
       }));
 
-      // merge, sort by date, take top 5
       const all = [...expenses, ...income]
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
         .slice(0, 5);
@@ -111,64 +110,84 @@ export default function RecentTransactions() {
   }, [user?.id]);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-bold text-gray-900">Recent Transactions</h2>
+    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <h2 className="text-lg font-bold text-gray-900">Recent Transactions</h2>
         <button
           onClick={() => router.push('/expenses')}
-          className="text-orange-600 text-sm font-semibold hover:text-orange-700 transition-colors"
+          className="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-1.5 rounded-lg transition-all"
         >
           View All →
         </button>
       </div>
 
+      {/* Loading State */}
       {isLoading ? (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-3 animate-pulse">
+            <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
               <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
-              <div className="flex-1">
-                <div className="h-4 w-32 bg-gray-200 rounded mb-1.5" />
-                <div className="h-3 w-20 bg-gray-100 rounded" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 bg-gray-200 rounded" />
+                <div className="h-3 w-24 bg-gray-100 rounded" />
               </div>
-              <div className="h-4 w-24 bg-gray-200 rounded" />
+              <div className="h-4 w-20 bg-gray-200 rounded" />
             </div>
           ))}
         </div>
       ) : transactions.length === 0 ? (
-        <div className="text-center py-8 text-gray-400 text-sm">No transactions yet</div>
+        /* Empty State */
+        <div className="text-center py-10">
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <Clock size={20} className="text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-sm font-medium">No transactions yet</p>
+          <p className="text-gray-400 text-xs mt-1">Start adding to see them here</p>
+        </div>
       ) : (
-        <div className="space-y-3">
+        /* Transaction List */
+        <div className="space-y-1">
           {transactions.map((t) => (
             <div
               key={t.id}
-              className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0"
+              className="group flex items-center justify-between py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors cursor-default"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                {/* Icon */}
                 <div
-                  className={`p-2 rounded-lg flex-shrink-0 ${
+                  className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                     t.type === 'income' ? 'bg-green-50' : 'bg-red-50'
                   }`}
                 >
                   {t.type === 'expense' ? (
-                    <ArrowDownLeft className="text-red-500" size={18} />
+                    <ArrowDownLeft className="text-red-500" size={18} strokeWidth={2} />
                   ) : (
-                    <ArrowUpRight className="text-green-500" size={18} />
+                    <ArrowUpRight className="text-green-500" size={18} strokeWidth={2} />
                   )}
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900 text-sm leading-tight">{t.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {t.category ?? (t.type === 'income' ? 'Income' : 'Expense')} · {formatDate(t.date)}
-                  </p>
+
+                {/* Info */}
+                <div className="min-w-0">
+                  <p className="font-medium text-gray-900 text-sm truncate">{t.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {/* Category Badge */}
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium">
+                      {t.category ?? (t.type === 'income' ? 'Income' : 'Expense')}
+                    </span>
+                    {/* Date */}
+                    <span className="text-xs text-gray-400">{formatDate(t.date)}</span>
+                  </div>
                 </div>
               </div>
+
+              {/* Amount */}
               <p
-                className={`font-semibold text-sm ${
+                className={`font-semibold text-sm tabular-nums flex-shrink-0 ${
                   t.type === 'income' ? 'text-green-600' : 'text-red-600'
                 }`}
               >
-                {t.type === 'income' ? '+' : '-'}NRs. {t.amount.toLocaleString('en-IN')}
+                {t.type === 'income' ? '+' : '-'}NRs {t.amount.toLocaleString('en-IN')}
               </p>
             </div>
           ))}

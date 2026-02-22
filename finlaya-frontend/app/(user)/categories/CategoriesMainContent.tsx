@@ -12,7 +12,7 @@ import CategoryCard from '@/components/(user)/categories/CategoryCard';
 import AddCategoryCard from '@/components/(user)/categories/AddCategoryCard';
 
 export const dynamic = 'force-static';
-export const revalidate = 60; // rebuild every 60 seconds
+export const revalidate = 60;
 
 export default function CategoriesMainContent() {
   const { user } = useAuth();
@@ -25,7 +25,6 @@ export default function CategoriesMainContent() {
   const [salaryError, setSalaryError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [showAddCard, setShowAddCard] = useState(false);
-  // Bump to trigger a re-fetch without useCallback (avoids cascading setState lint error)
   const [trigger, setTrigger] = useState(0);
   const refetch = () => setTrigger((t) => t + 1);
 
@@ -204,7 +203,7 @@ export default function CategoriesMainContent() {
         <div className="h-4 w-80 bg-gray-100 rounded mb-8" />
         <div className="h-24 bg-gray-200 rounded-2xl mb-6" />
         <div className="h-36 bg-gray-200 rounded-2xl mb-8" />
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[...Array(8)].map((_, i) => (
             <div key={i} className="h-44 bg-gray-200 rounded-2xl" />
           ))}
@@ -269,7 +268,7 @@ export default function CategoriesMainContent() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <AnimatePresence>
               {categories.map((cat) => (
                 <CategoryCard

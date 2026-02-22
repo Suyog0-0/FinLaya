@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Check, X } from 'lucide-react';
+import { Pencil, Trash2, Check, X, Save } from 'lucide-react';
 import { Category, getCategoryIcon, getBarColor, formatNRs } from './utils';
 
 interface CategoryCardProps {
@@ -56,16 +56,14 @@ export default function CategoryCard({
   return (
     <motion.div
       layout
-      className={`bg-white rounded-2xl border p-5 flex flex-col gap-3 transition-shadow hover:shadow-md ${
-        isEditing ? 'border-orange-300 shadow-md' : 'border-gray-100 shadow-sm'
+      className={`bg-white rounded-xl border p-5 transition-all hover:shadow-md ${
+        isEditing ? 'border-orange-300 shadow-md ring-2 ring-orange-100' : 'border-gray-100 shadow-sm'
       }`}
     >
       {/* Top row: icon + action buttons */}
-      <div className="flex items-start justify-between">
-        <div
-          className={`w-10 h-10 rounded-xl flex items-center justify-center ${colorClass}`}
-        >
-          <Icon size={20} />
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-11 h-11 rounded-xl flex items-center justify-center ${colorClass}`}>
+          <Icon size={20} strokeWidth={2} />
         </div>
 
         <div className="flex items-center gap-1">
@@ -74,42 +72,42 @@ export default function CategoryCard({
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="p-1.5 rounded-lg text-green-500 hover:bg-green-50 transition-colors"
+                className="p-2 rounded-lg bg-green-50 text-green-600 hover:bg-green-100 transition-colors disabled:opacity-50"
                 title="Save"
               >
                 {saving ? (
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                    className="w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"
+                    className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full"
                   />
                 ) : (
-                  <Check size={16} />
+                  <Check size={16} strokeWidth={2.5} />
                 )}
               </button>
               <button
                 onClick={handleCancel}
-                className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg bg-gray-50 text-gray-500 hover:bg-gray-100 transition-colors"
                 title="Cancel"
               >
-                <X size={16} />
+                <X size={16} strokeWidth={2} />
               </button>
             </>
           ) : (
             <>
               <button
                 onClick={() => setIsEditing(true)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors"
+                className="p-2 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors"
                 title="Edit"
               >
-                <Pencil size={15} />
+                <Pencil size={15} strokeWidth={2} />
               </button>
               <button
                 onClick={() => onDelete(cat.category_id)}
-                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
                 title="Delete"
               >
-                <Trash2 size={15} />
+                <Trash2 size={15} strokeWidth={2} />
               </button>
             </>
           )}
@@ -118,27 +116,28 @@ export default function CategoryCard({
 
       {/* Name / edit fields */}
       {isEditing ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-400 font-medium block mb-1">Name</label>
+            <label className="text-xs text-gray-500 font-medium block mb-1.5">Category Name</label>
             <input
               autoFocus
               type="text"
               value={editName}
               onChange={(e) => setEditName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSave()}
-              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-100 text-gray-800 font-semibold"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-gray-800 font-medium"
+              placeholder="Enter category name"
             />
           </div>
           <div>
-            <label className="text-xs text-gray-400 font-medium block mb-1">
-              Budget{' '}
+            <label className="text-xs text-gray-500 font-medium block mb-1.5">
+              Budget Limit
               {editPct > 0 && (
-                <span className="text-orange-500">({editPct}% of salary)</span>
+                <span className="ml-2 text-orange-500 font-semibold">({editPct}% of salary)</span>
               )}
             </label>
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
                 NRs
               </span>
               <input
@@ -147,41 +146,36 @@ export default function CategoryCard({
                 onChange={(e) => setEditBudget(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 min="0"
-                className="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg outline-none focus:border-orange-400 focus:ring-1 focus:ring-orange-100 text-gray-800"
+                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-gray-800 font-medium"
+                placeholder="0"
               />
             </div>
           </div>
         </div>
       ) : (
-        <div>
-          <h3 className="font-bold text-gray-900 text-base leading-tight">
-            {cat.category_name}
-          </h3>
-          <p className="text-xs text-gray-400 mt-0.5">{salaryPct}% of salary</p>
+        <div className="mb-3">
+          <h3 className="font-bold text-gray-900 text-base">{cat.category_name}</h3>
+          <p className="text-xs text-gray-500 mt-0.5">{salaryPct}% of monthly salary</p>
         </div>
       )}
 
       {/* Progress bar (hidden while editing) */}
       {!isEditing && (
-        <div>
-          <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+        <div className="pt-2 border-t border-gray-100">
+          <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden mb-2">
             <motion.div
               className={`h-full rounded-full ${barColor}`}
               initial={{ width: 0 }}
               animate={{ width: `${pct}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
             />
           </div>
-          <div className="flex items-center justify-between mt-2">
-            <span
-              className={`text-xs font-semibold ${
-                isOver ? 'text-red-500' : 'text-orange-500'
-              }`}
-            >
-              {isOver ? '⚠ ' : ''}
+          <div className="flex items-center justify-between">
+            <span className={`text-xs font-semibold ${isOver ? 'text-red-500' : 'text-gray-600'}`}>
+              {isOver && '⚠ '}
               {formatNRs(spent)} spent
             </span>
-            <span className="text-xs text-gray-500">{formatNRs(budget)}</span>
+            <span className="text-xs text-gray-500 font-medium">of {formatNRs(budget)}</span>
           </div>
         </div>
       )}

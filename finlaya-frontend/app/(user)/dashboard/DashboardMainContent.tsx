@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowRight } from 'lucide-react'; 
 import { useAuth } from '@/lib/contexts/AuthContext';
 import OnboardingModal from '@/components/modals/onboarding/OnboardingModal';
 import StatsCard from '@/components/(user)/shared/StatsCard';
@@ -15,7 +16,7 @@ import { useFinancialData } from '@/lib/hooks/useFinancialData';
 const SESSION_KEY = 'finlaya_setup_dismissed';
 
 export const dynamic = 'force-static';
-export const revalidate = 60; // rebuild every 60 seconds
+export const revalidate = 60;
 
 export default function DashboardMainContent() {
   const { user, loading } = useAuth();
@@ -126,11 +127,17 @@ export default function DashboardMainContent() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
               <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
             </div>
+
             <button
               onClick={() => router.push('/expenses')}
-              className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-3 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all"
+              className="group inline-flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-200/40 hover:shadow-amber-300/50 hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-gray-50 transition-all duration-200 cursor-pointer"
             >
-              View Expenses
+              <span>View Expenses</span>
+              <ArrowRight
+                size={16}
+                className="text-white/90 group-hover:translate-x-0.5 transition-transform duration-200"
+                strokeWidth={2.5}
+              />
             </button>
           </div>
 

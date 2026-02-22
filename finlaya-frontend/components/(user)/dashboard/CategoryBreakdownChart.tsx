@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { Target, TrendingUp, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -36,32 +37,41 @@ const CustomTooltip = ({
   const pct = limit > 0 ? Math.round((spent / limit) * 100) : null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[160px]">
-      <p className="font-semibold text-gray-800 mb-2">{label}</p>
-      <div className="space-y-1">
-        <div className="flex justify-between gap-6">
-          <span className="text-gray-500">Spent</span>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[180px]">
+      <p className="font-semibold text-gray-800 mb-2 truncate">{label}</p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500 flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full bg-orange-500" />
+            Spent
+          </span>
           <span className="font-semibold text-orange-600">
             NRs {spent.toLocaleString('en-IN')}
           </span>
         </div>
         {limit > 0 && (
-          <div className="flex justify-between gap-6">
-            <span className="text-gray-500">Budget</span>
-            <span className="font-semibold text-blue-600">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500 flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-full bg-green-300" />
+              Budget
+            </span>
+            <span className="font-semibold text-green-600">
               NRs {limit.toLocaleString('en-IN')}
             </span>
           </div>
         )}
         {pct !== null && (
-          <div
-            className={`text-xs mt-1 font-medium ${
-              pct > 100 ? 'text-red-500' : 'text-green-600'
-            }`}
-          >
-            {pct > 100
-              ? `⚠ ${pct - 100}% over budget`
-              : `${100 - pct}% remaining`}
+          <div className={`pt-2 border-t border-gray-100 mt-2`}>
+            <span
+              className={`text-xs font-semibold flex items-center gap-1 ${
+                pct > 100 ? 'text-red-500' : 'text-green-600'
+              }`}
+            >
+              {pct > 100 ? <AlertCircle size={12} /> : <TrendingUp size={12} />}
+              {pct > 100
+                ? `${pct - 100}% over budget`
+                : `${100 - pct}% remaining`}
+            </span>
           </div>
         )}
       </div>
@@ -69,7 +79,7 @@ const CustomTooltip = ({
   );
 };
 
-function truncateName(name: string, max = 9): string {
+function truncateName(name: string, max = 10): string {
   return name.length > max ? name.slice(0, max) + '…' : name;
 }
 
@@ -124,8 +134,6 @@ export default function CategoryBreakdownChart() {
       }
     });
 
-    // Build a bar for EVERY budget category — including brand-new ones with 0 spending
- 
     const chartData: CategoryData[] = categories
       .map((cat) => {
         const spent = spentMap[cat.category_id] || 0;
@@ -146,22 +154,17 @@ export default function CategoryBreakdownChart() {
     setIsLoading(false);
   }, [user]);
 
-  // Initial load
   useEffect(() => {
     (async () => {
       await fetchData();
     })();
   }, [fetchData]);
 
-  // Poll every 10 s — picks up categories added from the Categories page
-  // without needing a full page reload or shared global state
   useEffect(() => {
     const id = setInterval(fetchData, 10000);
     return () => clearInterval(id);
   }, [fetchData]);
 
-  // Re-fetch immediately when the user switches back to this tab
-  // (e.g. added a category on the Categories page then navigated back)
   useEffect(() => {
     const onVisible = () => {
       if (document.visibilityState === 'visible') fetchData();
@@ -178,88 +181,100 @@ export default function CategoryBreakdownChart() {
 
   if (!isLoading && data.length === 0) {
     return (
-      <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Category Breakdown</h2>
-        <p className="text-sm text-gray-500 mb-6">
-          This month&apos;s spending vs budget
-        </p>
-        <div className="h-[200px] flex items-center justify-center text-gray-400 text-sm">
-          No budget categories set up yet
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+            <Target size={16} className="text-amber-500" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Category Breakdown</h2>
+        </div>
+        <div className="h-[180px] flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <Target size={20} className="text-gray-400" />
+          </div>
+          <p className="text-gray-500 text-sm font-medium">No categories yet</p>
+          <p className="text-gray-400 text-xs mt-1">Set up budgets to see your breakdown</p>
         </div>
       </div>
     );
   }
 
-  // Grow height so bars stay readable when there are many categories
-  const chartHeight = Math.max(260, data.length * 32);
+  const chartHeight = Math.max(280, data.length * 36);
 
   return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Category Breakdown</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
-            This month&apos;s spending vs budget
-          </p>
-        </div>
-        <div className="flex items-center gap-3 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-orange-400" />
-            <span className="text-gray-500">Spent</span>
+    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100">
+            <Target size={16} className="text-amber-500" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-green-200" />
-            <span className="text-gray-500">Budget</span>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Category Breakdown</h2>
+            <p className="text-xs text-gray-500 mt-0.5">This month&apos;s spending vs budget</p>
+          </div>
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 rounded-lg">
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+            <span className="text-xs text-gray-600 font-medium">Spent</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-lg">
+            <div className="w-2.5 h-2.5 rounded-full bg-green-300" />
+            <span className="text-xs text-gray-600 font-medium">Budget</span>
           </div>
         </div>
       </div>
 
+      {/* Chart */}
       {isLoading ? (
-        <div className="h-[260px] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+        <div className="h-[280px] flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
         <ResponsiveContainer width="100%" height={chartHeight}>
           <BarChart
             data={data}
-            margin={{ top: 4, right: 4, left: 0, bottom: 0 }}
-            barCategoryGap="30%"
-            barGap={3}
+            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+            barCategoryGap="35%"
+            barGap={4}
           >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="#f0f0f0"
-              vertical={false}
-            />
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
             <XAxis
               dataKey="name"
               stroke="#9ca3af"
               style={{ fontSize: '11px' }}
               tick={{ fill: '#6b7280' }}
               tickFormatter={(v) => truncateName(v)}
+              tickMargin={8}
             />
             <YAxis
               tickFormatter={formatValue}
               stroke="#9ca3af"
               style={{ fontSize: '11px' }}
-              width={38}
+              width={42}
+              tickMargin={4}
             />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(251, 146, 60, 0.05)' }} />
 
             {/* Budget bars (background) */}
             <Bar
               dataKey="limit"
               name="limit"
               fill="#bbf7d0"
-              radius={[4, 4, 0, 0]}
+              radius={[6, 6, 0, 0]}
+              opacity={0.6}
             />
 
-            {/* Spent bars (foreground) — orange normally, red if over budget */}
-            <Bar dataKey="spent" name="spent" radius={[4, 4, 0, 0]}>
+            {/* Spent bars (foreground) */}
+            <Bar dataKey="spent" name="spent" radius={[6, 6, 0, 0]} animationDuration={500}>
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
                   fill={entry.overBudget ? '#ef4444' : '#f97316'}
+                  style={{ cursor: 'pointer' }}
                 />
               ))}
             </Bar>

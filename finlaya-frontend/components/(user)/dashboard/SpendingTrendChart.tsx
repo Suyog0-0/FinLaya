@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart, Legend } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
@@ -19,7 +20,7 @@ function getLast6Months(): { label: string; year: number; month: number }[] {
     result.push({
       label: d.toLocaleString('default', { month: 'short' }),
       year: d.getFullYear(),
-      month: d.getMonth() + 1, // 1-indexed
+      month: d.getMonth() + 1,
     });
   }
   return result;
@@ -27,16 +28,43 @@ function getLast6Months(): { label: string; year: number; month: number }[] {
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
   if (!active || !payload?.length) return null;
+  
+  const income = payload.find((p) => p.name === 'income')?.value ?? 0;
+  const expenses = payload.find((p) => p.name === 'expenses')?.value ?? 0;
+  const net = income - expenses;
+
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm">
-      <p className="font-semibold text-gray-800 mb-2">{label}</p>
-      {payload.map((p) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
-          <span className="text-gray-500 capitalize">{p.name}:</span>
-          <span className="font-semibold text-gray-800">NRs {p.value.toLocaleString('en-IN')}</span>
+    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[200px]">
+      <p className="font-semibold text-gray-800 mb-3">{label}</p>
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500 flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            Income
+          </span>
+          <span className="font-semibold text-emerald-600">
+            NRs {income.toLocaleString('en-IN')}
+          </span>
         </div>
-      ))}
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500 flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+            Expenses
+          </span>
+          <span className="font-semibold text-orange-600">
+            NRs {expenses.toLocaleString('en-IN')}
+          </span>
+        </div>
+        <div className="pt-2 border-t border-gray-100 mt-2">
+          <div className="flex items-center justify-between">
+            <span className="text-gray-500 text-xs">Net</span>
+            <span className={`text-xs font-semibold flex items-center gap-1 ${net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+              {net >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              NRs {Math.abs(net).toLocaleString('en-IN')}
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -59,7 +87,7 @@ export default function SpendingTrendChart() {
       const startDate = `${firstMonth.year}-${String(firstMonth.month).padStart(2, '0')}-01`;
       const endDate = new Date(lastMonth.year, lastMonth.month, 0)
         .toISOString()
-        .split('T')[0]; // last day of last month
+        .split('T')[0];
 
       const [expResult, incResult] = await Promise.all([
         supabase
@@ -77,7 +105,6 @@ export default function SpendingTrendChart() {
           .lte('income_date', endDate),
       ]);
 
-      // Aggregate by month
       const monthMap: Record<string, { income: number; expenses: number }> = {};
       months.forEach(({ label }) => {
         monthMap[label] = { income: 0, expenses: 0 };
@@ -118,70 +145,134 @@ export default function SpendingTrendChart() {
     return String(value);
   };
 
-  return (
-    <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Spending Trend</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Last 6 months overview</p>
+  // Calculate trend for simple indicator
+  const getTrend = () => {
+    if (data.length < 2) return null;
+    const last = data[data.length - 1];
+    const prev = data[data.length - 2];
+    const diff = last.expenses - prev.expenses;
+    if (diff > 0) return { direction: 'up' as const, value: diff };
+    if (diff < 0) return { direction: 'down' as const, value: Math.abs(diff) };
+    return null;
+  };
+
+  const trend = getTrend();
+
+  if (!isLoading && data.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+        <div className="flex items-center gap-2 mb-4">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+            <Activity size={16} className="text-amber-500" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900">Spending Trend</h2>
         </div>
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-green-400" />
-            <span className="text-gray-500">Income</span>
+        <div className="h-[180px] flex flex-col items-center justify-center text-center">
+          <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <Activity size={20} className="text-gray-400" />
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-orange-400" />
-            <span className="text-gray-500">Expenses</span>
+          <p className="text-gray-500 text-sm font-medium">No data yet</p>
+          <p className="text-gray-400 text-xs mt-1">Add income or expenses to see your trend</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100">
+            <Activity size={16} className="text-amber-500" />
           </div>
+          <div>
+            <h2 className="text-lg font-bold text-gray-900">Spending Trend</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Last 6 months overview</p>
+          </div>
+        </div>
+
+        {/* Legend + Trend */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 rounded-lg">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+            <span className="text-xs text-gray-600 font-medium">Income</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-50 rounded-lg">
+            <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
+            <span className="text-xs text-gray-600 font-medium">Expenses</span>
+          </div>
+          {trend && (
+            <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
+              trend.direction === 'up' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+            }`}>
+              {trend.direction === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
+              {trend.direction === 'up' ? '↑' : '↓'} NRs {trend.value.toLocaleString('en-IN')}
+            </div>
+          )}
         </div>
       </div>
 
+      {/* Chart */}
       {isLoading ? (
         <div className="h-[260px] flex items-center justify-center">
-          <div className="w-8 h-8 border-2 border-orange-400 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin" />
         </div>
       ) : (
-
-
-    <ResponsiveContainer width="100%" height={260}>
-      <AreaChart data={data} margin={{ top: 20, right: 4, left: 0, bottom: 0 }}>
-        <defs>
-          <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#34d399" stopOpacity={0.25} />
-            <stop offset="95%" stopColor="#34d399" stopOpacity={0.02} />
-          </linearGradient>
-          <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="5%" stopColor="#f97316" stopOpacity={0.25} />
-            <stop offset="95%" stopColor="#f97316" stopOpacity={0.02} />
-          </linearGradient>
-        </defs>
-        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-        <XAxis dataKey="month" stroke="#9ca3af" style={{ fontSize: '12px' }} />
-        <YAxis tickFormatter={formatYAxis} stroke="#9ca3af" style={{ fontSize: '12px' }} width={40} />
-        <Tooltip content={<CustomTooltip />} />
-        <Area
-          type="monotone"
-          dataKey="income"
-          stroke="#34d399"
-          strokeWidth={2.5}
-          fill="url(#incomeGrad)"
-          dot={{ fill: '#34d399', strokeWidth: 0, r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-        <Area
-          type="monotone"
-          dataKey="expenses"
-          stroke="#f97316"
-          strokeWidth={2.5}
-          fill="url(#expenseGrad)"
-          dot={{ fill: '#f97316', strokeWidth: 0, r: 3 }}
-          activeDot={{ r: 5 }}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-
-
+        <ResponsiveContainer width="100%" height={260}>
+          <AreaChart data={data} margin={{ top: 16, right: 8, left: -8, bottom: 0 }}>
+            <defs>
+              <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#34d399" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#34d399" stopOpacity={0.03} />
+              </linearGradient>
+              <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#f97316" stopOpacity={0.03} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            <XAxis
+              dataKey="month"
+              stroke="#9ca3af"
+              style={{ fontSize: '11px' }}
+              tick={{ fill: '#6b7280' }}
+              tickMargin={8}
+            />
+            <YAxis
+              tickFormatter={formatYAxis}
+              stroke="#9ca3af"
+              style={{ fontSize: '11px' }}
+              width={44}
+              tickMargin={4}
+            />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#f1f5f9', strokeDasharray: '4 4' }} />
+            
+            {/* Income Area */}
+            <Area
+              type="monotone"
+              dataKey="income"
+              stroke="#34d399"
+              strokeWidth={2.5}
+              fill="url(#incomeGrad)"
+              dot={{ fill: '#34d399', strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
+              animationDuration={600}
+            />
+            
+            {/* Expenses Area */}
+            <Area
+              type="monotone"
+              dataKey="expenses"
+              stroke="#f97316"
+              strokeWidth={2.5}
+              fill="url(#expenseGrad)"
+              dot={{ fill: '#f97316', strokeWidth: 0, r: 3 }}
+              activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
+              animationDuration={600}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       )}
     </div>
   );
