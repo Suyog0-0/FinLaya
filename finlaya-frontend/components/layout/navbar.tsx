@@ -79,6 +79,25 @@ export default function Navbar() {
     fetchAvatar();
   }, [user?.id]);
 
+  // Prefetch all main pages programmatically
+  useEffect(() => {
+    if (!router || !user?.id) return;
+    const pagesToPrefetch = [
+      "/dashboard",
+      "/expenses",
+      "/categories",
+      "/goals",
+      "/emi-loan",
+      "/reports",
+      `/profile/${user.id}`,
+      "/settings",
+      "/not-found"
+    ];
+    pagesToPrefetch.forEach((page) => {
+      router.prefetch(page);
+    });
+  }, [router, user?.id]);
+
   const handleLogout = async () => {
     await signOut();
     router.push("/login");
@@ -90,7 +109,7 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           
           {/* Logo */}
-          <Link href="/dashboard" className="text-2xl font-bold text-orange-600">
+          <Link href="/dashboard" prefetch={true} className="text-2xl font-bold text-orange-600">
             FinLaya
           </Link>
 
@@ -103,7 +122,8 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex items-center px-1 py-2 border-b-2 transition-all duration-300 ${
+                  prefetch={true}
+                  className={`flex items-center px-1 py-2 border-b-2 transition-all duration-300 cursor-pointer ${
                     isActive 
                       ? 'border-orange-500 text-orange-600 font-semibold' 
                       : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
@@ -122,7 +142,7 @@ export default function Navbar() {
             <div className="hidden md:block relative">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100"
+                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 cursor-pointer"
               >
                 <AvatarCircle avatarUrl={avatarUrl} initials={userInitials} size="sm" />
                 <div className="flex flex-col text-left">
@@ -145,8 +165,9 @@ export default function Navbar() {
                   {/* Profile */}
                   <Link
                     href={`/profile/${user?.id}`}
+                    prefetch={true}
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-t-lg"
+                    className="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-t-lg cursor-pointer"
                   >
                     <User size={16} />
                     <span>Profile</span>
@@ -155,8 +176,9 @@ export default function Navbar() {
                   {/* Settings */}
                   <Link
                     href="/settings"
+                    prefetch={true}
                     onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100"
+                    className="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100 cursor-pointer"
                   >
                     <Settings size={16} />
                     <span>Settings</span>
@@ -179,7 +201,7 @@ export default function Navbar() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 cursor-pointer"
             >
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
@@ -196,8 +218,9 @@ export default function Navbar() {
                 <Link
                   key={link.href}
                   href={link.href}
+                  prefetch={true}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center px-1 py-2 border-b-2 transition-all duration-300 ${
+                  className={`flex items-center px-1 py-2 border-b-2 transition-all duration-300 cursor-pointer ${
                     isActive 
                       ? 'border-orange-500 text-orange-600 font-semibold' 
                       : 'border-transparent text-gray-600 hover:text-gray-800 hover:border-gray-300'
@@ -221,8 +244,9 @@ export default function Navbar() {
 
               <Link
                 href={`/profile/${user?.id}`}
+                prefetch={true}
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer"
               >
                 <User size={20} />
                 <span className="font-medium">Profile</span>
@@ -230,8 +254,9 @@ export default function Navbar() {
 
               <Link
                 href="/settings"
+                prefetch={true}
                 onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100"
+                className="flex items-center gap-3 px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 cursor-pointer"
               >
                 <Settings size={20} />
                 <span className="font-medium">Settings</span>

@@ -11,6 +11,9 @@ import StatsCard from '@/components/(user)/shared/StatsCard';
 import TransactionHistory from '@/components/(user)/expenses/TransactionHistory';
 import SearchFilter from '@/components/(user)/expenses/SearchFilter';
 
+export const dynamic = 'force-static';
+export const revalidate = 60; // rebuild every 60 seconds
+
 interface Transaction {
   expense_id: number;
   description: string;

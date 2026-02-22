@@ -6,6 +6,9 @@ import NotificationsBox from '@/components/(user)/settings/Notificationsbox';
 import SecurityBox from '@/components/(user)/settings/Securitybox';
 import DeleteAccountBox from '@/components/(user)/settings/Deleteaccountbox';
 
+export const dynamic = 'force-static';
+export const revalidate = 60; // rebuild every 60 seconds
+
 export default function SettingsMainContent() {
   const { user } = useAuth();
 

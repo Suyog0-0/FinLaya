@@ -6,6 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
 
+export const dynamic = 'force-static';
+export const revalidate = 60; // rebuild every 60 seconds
+
 export default function ProfileMainContent() {
   const { user, loading } = useAuth();
   const router = useRouter();

@@ -11,6 +11,9 @@ import AllocationOverviewBox from '@/components/(user)/categories/AllocationOver
 import CategoryCard from '@/components/(user)/categories/CategoryCard';
 import AddCategoryCard from '@/components/(user)/categories/AddCategoryCard';
 
+export const dynamic = 'force-static';
+export const revalidate = 60; // rebuild every 60 seconds
+
 export default function CategoriesMainContent() {
   const { user } = useAuth();
 

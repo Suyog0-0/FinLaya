@@ -14,6 +14,9 @@ import { useFinancialData } from '@/lib/hooks/useFinancialData';
 
 const SESSION_KEY = 'finlaya_setup_dismissed';
 
+export const dynamic = 'force-static';
+export const revalidate = 60; // rebuild every 60 seconds
+
 export default function DashboardMainContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
