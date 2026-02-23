@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Calendar, CreditCard } from 'lucide-react';
+import ConfirmDeleteModal from '@/components/modals/ConfirmDelete/ConfirmDeleteModal';
+
 
 interface Transaction {
   expense_id: number;
@@ -31,8 +33,22 @@ function ThreeDotMenu({
   onEdit: (t: Transaction) => void;
   onDelete: (id: number, type: 'expense' | 'income') => void;
 }) {
+  
+  
+  
+  
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  
+  
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    await onDelete(transaction.expense_id, transaction.type);
+    setIsDeleting(false);
+    setShowDeleteModal(false);
+  };
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -43,6 +59,14 @@ function ThreeDotMenu({
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+
+
+
+
+
+
+
 
   return (
     <div className="relative" ref={ref}>
@@ -75,7 +99,7 @@ function ThreeDotMenu({
             type="button"
             onClick={() => {
               setOpen(false);
-              onDelete(transaction.expense_id, transaction.type);
+              setShowDeleteModal(true)
             }}
             className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
@@ -83,10 +107,21 @@ function ThreeDotMenu({
             Delete
           </button>
         </div>
+        
       )}
+
+      {/* Confirm Delete Modal */}
+      <ConfirmDeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+        message={`Are you sure you want to delete "${transaction.description}"?`}
+        isDeleting={isDeleting}
+      />
     </div>
   );
 }
+
 
 export default function TransactionHistory({
   filtered,
