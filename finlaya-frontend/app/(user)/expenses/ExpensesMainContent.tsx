@@ -225,7 +225,7 @@ export default function ExpensesMainContent() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsIncomeModalOpen(true)}
-              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-500 text-white font-semibold text-sm shadow-md shadow-emerald-200/40 hover:bg-emerald-600 hover:shadow-emerald-300/50 active:scale-[0.98] transition-all duration-200"
+              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-emerald-500 text-white font-semibold text-sm shadow-md shadow-emerald-200/40 hover:bg-emerald-600 hover:shadow-emerald-300/50 active:scale-[0.98] transition-all duration-200 cursor-pointer"
             >
               <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
                 <TrendingUp size={13} className="text-white" strokeWidth={2.5} />
@@ -235,7 +235,7 @@ export default function ExpensesMainContent() {
 
             <button
               onClick={() => setIsExpenseModalOpen(true)}
-              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-red-500 text-white font-semibold text-sm shadow-md shadow-red-200/40 hover:bg-red-600 hover:shadow-red-300/50 active:scale-[0.98] transition-all duration-200"
+              className="group inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-red-500 text-white font-semibold text-sm shadow-md shadow-red-200/40 hover:bg-red-600 hover:shadow-red-300/50 active:scale-[0.98] transition-all duration-200 cursor-pointer"
             >
               <div className="w-5 h-5 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
                 <TrendingDown size={13} className="text-white" strokeWidth={2.5} />
