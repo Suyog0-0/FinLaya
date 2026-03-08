@@ -46,6 +46,19 @@ export default function AdminUsersMainContent() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
+  useEffect(() => {
+    const modalOpen = viewUser !== null || deleteTarget !== null;
+    if (modalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [viewUser, deleteTarget]);
+
   useEffect(() => { fetchUsers(); }, []);
 
   const fetchUsers = async () => {
