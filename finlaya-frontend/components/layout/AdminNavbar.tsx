@@ -4,161 +4,125 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/contexts/AuthContext";
-import { 
-  LayoutDashboard, 
-  Users, 
-  Settings, 
-  LogOut, 
-  Menu, 
-  X,
-  Shield
-} from "lucide-react";
+import { LayoutDashboard, Users, LogOut, Menu, X, ChevronDown } from "lucide-react";
 
-const adminNavLinks = [
-  { href: "/admin/dashboard", label: "Admin Dashboard", icon: LayoutDashboard },
-  { href: "/admin/users", label: "User Management", icon: Users },
-  { href: "/admin/settings", label: "Admin Settings", icon: Settings },
+const navLinks = [
+  { href: "/admin-dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/admin-users", label: "Users", icon: Users },
 ];
 
 export default function AdminNavbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOut } = useAuth();
 
-  const userName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Admin';
-  const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Admin';
+  const initials = name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
-  const handleLogout = async () => {
+  const handleSignOut = async () => {
     await signOut();
-    router.push("/login");
+    router.push('/login');
   };
 
   return (
-    <nav className="bg-gradient-to-r from-purple-600 to-indigo-600 border-b border-purple-700 sticky top-0 z-50 shadow-lg">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          
+    <nav className="bg-[#0a0a0a] border-b border-white/[0.06] sticky top-0 z-50">
+      <div className="max-w-6xl mx-auto px-5">
+        <div className="flex items-center justify-between h-12">
+
           {/* Logo */}
-          <Link href="/admin/dashboard" className="flex items-center gap-2">
-            <Shield className="text-white" size={28} />
-            <div>
-              <span className="text-2xl font-bold text-white">FinLaya</span>
-              <span className="block text-xs text-purple-200">Admin Panel</span>
-            </div>
+          <Link href="/admin-dashboard" className="flex items-center gap-2">
+            <span className="text-white font-semibold text-sm tracking-tight">FinLaya</span>
+            <span className="text-[10px] font-mono text-white/20 border border-white/10 px-1.5 py-0.5 rounded">
+              ADMIN
+            </span>
           </Link>
 
-          {/* Desktop Menu */}
-          <div className="hidden md:flex items-center gap-2">
-            {adminNavLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href;
-              
+          {/* Center nav */}
+          <div className="hidden md:flex items-center gap-0.5">
+            {navLinks.map(({ href, label }) => {
+              const active = pathname === href;
               return (
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-                    isActive 
-                      ? 'bg-white/20 text-white backdrop-blur-sm' 
-                      : 'text-purple-100 hover:bg-white/10'
+                  key={href}
+                  href={href}
+                  className={`px-3.5 py-1.5 rounded-md text-[13px] font-medium transition-all ${
+                    active
+                      ? 'text-white bg-white/10'
+                      : 'text-white/40 hover:text-white/80 hover:bg-white/5'
                   }`}
                 >
-                  <Icon size={18} />
-                  <span className="font-medium">{link.label}</span>
+                  {label}
                 </Link>
               );
             })}
           </div>
 
-          {/* User Menu */}
-          <div className="flex items-center gap-4">
-            {/* Desktop User Button */}
-            <div className="hidden md:block relative">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 text-white"
-              >
-                <div className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white font-semibold text-sm border-2 border-white/40">
-                  {userInitials}
-                </div>
-                <span className="text-sm font-medium">{userName}</span>
-              </button>
-
-              {/* Dropdown */}
-              {isDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200">
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setIsDropdownOpen(false)}
-                    className="flex items-center gap-2 px-4 py-3 text-gray-700 hover:bg-gray-100 rounded-t-lg"
-                  >
-                    <LayoutDashboard size={16} />
-                    <span>User Dashboard</span>
-                  </Link>
-                  <div className="border-t border-gray-200"></div>
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 px-4 py-3 text-red-600 hover:bg-red-50 w-full rounded-b-lg cursor-pointer"
-                  >
-                    <LogOut size={16} />
-                    <span>Logout</span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Mobile Menu Button */}
+          {/* Right — user */}
+          <div className="hidden md:block relative">
             <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-white/10 text-white"
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 py-1.5 px-2 rounded-md hover:bg-white/5 transition-colors"
             >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              <div className="w-6 h-6 rounded-full bg-white/10 border border-white/10 flex items-center justify-center text-white/70 text-[10px] font-bold">
+                {initials}
+              </div>
+              <span className="text-white/60 text-[13px]">{name}</span>
+              <ChevronDown size={11} className={`text-white/30 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
             </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-1.5 w-48 bg-[#111] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden">
+                <div className="px-3.5 py-2.5 border-b border-white/[0.06]">
+                  <p className="text-[11px] text-white/30 truncate">{user?.email}</p>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-2.5 w-full px-3.5 py-2.5 text-[13px] text-red-400/80 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut size={13} />
+                  Sign out
+                </button>
+              </div>
+            )}
           </div>
+
+          {/* Mobile toggle */}
+          <button
+            onClick={() => setMenuOpen(!menuOpen)}
+            className="md:hidden p-1.5 rounded-md text-white/40 hover:bg-white/5"
+          >
+            {menuOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
         </div>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-purple-700 py-4 space-y-2">
-            {adminNavLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = pathname === link.href;
-              
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div className="md:hidden border-t border-white/[0.06] py-2 space-y-0.5">
+            {navLinks.map(({ href, label, icon: Icon }) => {
+              const active = pathname === href;
               return (
                 <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-lg ${
-                    isActive 
-                      ? 'bg-white/20 text-white' 
-                      : 'text-purple-100 hover:bg-white/10'
+                  key={href}
+                  href={href}
+                  onClick={() => setMenuOpen(false)}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm ${
+                    active ? 'text-white bg-white/10' : 'text-white/40 hover:bg-white/5'
                   }`}
                 >
-                  <Icon size={20} />
-                  <span className="font-medium">{link.label}</span>
+                  <Icon size={14} />
+                  {label}
                 </Link>
               );
             })}
-
-            <div className="border-t border-purple-700 pt-4 mt-4 space-y-2">
-              <Link
-                href="/dashboard"
-                onClick={() => setIsMenuOpen(false)}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-purple-100 hover:bg-white/10"
-              >
-                <LayoutDashboard size={20} />
-                <span className="font-medium">User Dashboard</span>
-              </Link>
-
+            <div className="border-t border-white/[0.06] pt-2 mt-2">
               <button
-                onClick={handleLogout}
-                className="flex items-center gap-3 px-4 py-3 rounded-lg text-white hover:bg-red-500/20 w-full cursor-pointer"
+                onClick={handleSignOut}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-md text-sm text-red-400/80 w-full hover:bg-red-500/10"
               >
-                <LogOut size={20} />
-                <span className="font-medium">Logout</span>
+                <LogOut size={14} />
+                Sign out
               </button>
             </div>
           </div>

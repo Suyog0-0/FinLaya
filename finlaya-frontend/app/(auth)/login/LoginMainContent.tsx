@@ -1,13 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import LoginGoogle from './LoginGoogle';
 import LoginForm from './LoginForm';
-import api from '@/lib/api/client'; // Import API client
 
 export default function LoginMainContent() {
   const [email, setEmail] = useState('');
@@ -16,36 +15,29 @@ export default function LoginMainContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, isAdmin, isAdminLoading, user } = useAuth();
 
-  
-  
-  
+  // Once user is logged in and admin check is done, redirect accordingly
+  useEffect(() => {
+    if (!user || isAdminLoading) return;
+    if (isAdmin) {
+      router.push('/admin-dashboard');
+    } else {
+      router.push('/dashboard');
+    }
+  }, [user, isAdmin, isAdminLoading, router]);
+
   const handleSubmit = async (e: React.FormEvent) => {
-
     e.preventDefault();
-
     setIsLoading(true);
-
     setError('');
 
-    // Login with Supabase (authentication)
     const { error: signInError } = await signIn(email, password);
     if (signInError) {
       setError(signInError.message);
       setIsLoading(false);
-    } else {
-      // After successful Supabase login, notify backend
-      const backendResult = await api.auth.login(email, password);
-      console.log('Backend notified:', backendResult);
-      router.push('/dashboard');
     }
-  };
-
-
-
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword);
+    // Redirect is handled by the useEffect above
   };
 
   return (
@@ -80,14 +72,11 @@ export default function LoginMainContent() {
           className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100"
         >
           <LoginForm
-            email={email}
-            setEmail={setEmail}
-            password={password}
-            setPassword={setPassword}
-            error={error}
-            isLoading={isLoading}
+            email={email} setEmail={setEmail}
+            password={password} setPassword={setPassword}
+            error={error} isLoading={isLoading}
             showPassword={showPassword}
-            togglePasswordVisibility={togglePasswordVisibility}
+            togglePasswordVisibility={() => setShowPassword(!showPassword)}
             handleSubmit={handleSubmit}
           />
 

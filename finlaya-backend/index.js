@@ -43,6 +43,11 @@ app.get('/health', (req, res) => {
 const authRoutes = require('./routes/auth');
 app.use('/auth', authRoutes);
 
+//Admin Routes
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', adminRoutes);
+
+
 // Test route to verify server is working
 app.get('/', (req, res) => {
   res.json({
