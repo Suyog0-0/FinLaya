@@ -18,6 +18,7 @@ export function useFinancialData(): FinancialData {
   const { user } = useAuth();
   const [monthlySalary, setMonthlySalary] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [savings, setSavings] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [trigger, setTrigger] = useState(0);
@@ -53,12 +54,26 @@ export function useFinancialData(): FinancialData {
           .toISOString()
           .split('T')[0];
 
-        const { data: expensesData, error: expensesError } = await supabase
-          .from('expenses')
-          .select('amount')
-          .eq('user_id', user.id)
-          .gte('expense_date', monthStart)
-          .lte('expense_date', monthEnd);
+        const [
+          { data: expensesData, error: expensesError },
+          { data: incomeData },
+          { data: goalsData },
+        ] = await Promise.all([
+          supabase
+            .from('expenses')
+            .select('amount')
+            .eq('user_id', user.id)
+            .gte('expense_date', monthStart)
+            .lte('expense_date', monthEnd),
+          supabase
+            .from('income')
+            .select('amount')
+            .eq('user_id', user.id),
+          supabase
+            .from('goals')
+            .select('saved_amount')
+            .eq('user_id', user.id),
+        ]);
 
         if (expensesError) {
           setError('Failed to fetch expenses');
@@ -70,7 +85,20 @@ export function useFinancialData(): FinancialData {
           (sum, e) => sum + Number(e.amount),
           0
         );
+        const incomeTableSum = (incomeData || []).reduce(
+          (sum, i) => sum + Number(i.amount),
+          0
+        );
+        const totalGoalSavings = (goalsData || []).reduce(
+          (sum, g) => sum + Number(g.saved_amount ?? 0),
+          0
+        );
+
+        const totalIncome = salary + incomeTableSum;
+        const computedSavings = Math.max(0, totalIncome - totalExpenses - totalGoalSavings);
+
         setMonthlyExpenses(totalExpenses);
+        setSavings(computedSavings);
       } catch {
         setError('Unexpected error');
       } finally {
@@ -81,12 +109,6 @@ export function useFinancialData(): FinancialData {
     fetchData();
   }, [user?.id, trigger]);
 
-  // Savings = 20% of salary — shown as a stat, but it's already
-  // part of salary, not additional money on top of it.
-  const savings = monthlySalary * 0.2;
-
-  // Total balance = salary minus expenses this month.
-  // Savings is NOT added here — it lives inside the salary figure already.
   const totalBalance = monthlySalary - monthlyExpenses;
 
   return {

@@ -229,7 +229,7 @@ export default function GoalsMainContent() {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [contributeGoal, setContributeGoal] = useState<Goal | null>(null);
 
-  // Available savings = total income - total expenses - total already saved in goals
+  // Available savings = (monthly_salary + income entries) - expenses - goal savings
   const [availableSavings, setAvailableSavings] = useState(0);
 
   const fetchData = useCallback(async () => {
@@ -240,13 +240,17 @@ export default function GoalsMainContent() {
       { data: goalsData },
       { data: incomeData },
       { data: expenseData },
+      { data: userData },
     ] = await Promise.all([
       supabase.from('goals').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('income').select('amount').eq('user_id', user.id),
       supabase.from('expenses').select('amount').eq('user_id', user.id),
+      supabase.from('users').select('monthly_salary').eq('user_id', user.id).maybeSingle(),
     ]);
 
-    const totalIncome = (incomeData ?? []).reduce((s, r) => s + Number(r.amount), 0);
+    const monthlySalary = Number(userData?.monthly_salary ?? 0);
+    const incomeTableSum = (incomeData ?? []).reduce((s, r) => s + Number(r.amount), 0);
+    const totalIncome = monthlySalary + incomeTableSum;
     const totalExpenses = (expenseData ?? []).reduce((s, r) => s + Number(r.amount), 0);
     const totalGoalSavings = (goalsData ?? []).reduce((s, g) => s + Number(g.saved_amount ?? 0), 0);
 
@@ -258,7 +262,7 @@ export default function GoalsMainContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Add new goal — fix: send emoji not icon_name
+  // Add new goal
   const handleSaveGoal = async (goalData: {
     title: string;
     description: string;
@@ -295,7 +299,7 @@ export default function GoalsMainContent() {
   const handleDelete = async (id: string) => {
     await supabase.from('goals').delete().eq('id', id).eq('user_id', user!.id);
     setGoals(prev => prev.filter(g => g.id !== id));
-    await fetchData(); // recalculate available savings
+    await fetchData();
   };
 
   const activeGoals = goals.filter(g => Number(g.saved_amount) < Number(g.target_amount));
