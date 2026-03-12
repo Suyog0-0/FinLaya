@@ -12,7 +12,7 @@ import TransactionHistory from '@/components/(user)/expenses/TransactionHistory'
 import SearchFilter from '@/components/(user)/expenses/SearchFilter';
 
 export const dynamic = 'force-static';
-export const revalidate = 60; // rebuild every 60 seconds
+export const revalidate = 60;
 
 interface Transaction {
   expense_id: number;
@@ -108,7 +108,6 @@ export default function ExpensesMainContent() {
         .eq('user_id', user.id)
         .maybeSingle(),
 
-      // ✅ Fetch ALL budget categories the user set up (onboarding or manually added)
       supabase
         .from('budget_categories')
         .select('category_name')
@@ -150,9 +149,6 @@ export default function ExpensesMainContent() {
       (a, b) => new Date(b.expense_date).getTime() - new Date(a.expense_date).getTime()
     );
 
-    // ✅ Always show all budget categories the user has set up,
-    //    plus any income categories that appear in transactions.
-    //    Merge + deduplicate + sort alphabetically.
     const budgetCategoryNames: string[] = (budgetCatsResult.data || []).map(
       (c: { category_name: string }) => c.category_name
     );
@@ -189,16 +185,15 @@ export default function ExpensesMainContent() {
   const netBalance = monthlySalary + totalIncome - totalExpenses;
 
   const filtered = transactions.filter((t) => {
-    const matchSearch = t.description?.toLowerCase().includes(search.toLowerCase());
-    const matchCategory =
-      selectedCategory === 'All' || t.category_name === selectedCategory;
+    const matchSearch    = t.description?.toLowerCase().includes(search.toLowerCase());
+    const matchCategory  = selectedCategory === 'All' || t.category_name === selectedCategory;
     return matchSearch && matchCategory;
   });
 
+  // Removed confirm() — TransactionHistory already shows ConfirmDeleteModal
   const handleDelete = async (id: number, type: 'expense' | 'income') => {
-    if (!confirm('Delete this transaction? This cannot be undone.')) return;
     const table = type === 'expense' ? 'expenses' : 'income';
-    const col = type === 'expense' ? 'expense_id' : 'income_id';
+    const col   = type === 'expense' ? 'expense_id' : 'income_id';
     await supabase.from(table).delete().eq(col, id).eq('user_id', user?.id);
     fetchAll();
   };
@@ -207,8 +202,7 @@ export default function ExpensesMainContent() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
 
-
-        {/* Header  */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight flex items-center gap-2">
@@ -245,26 +239,11 @@ export default function ExpensesMainContent() {
           </div>
         </div>
 
-
-
-
         {/* Summary Cards */}
         <div className="grid grid-cols-3 gap-4 mb-6">
-          <StatsCard
-            statId="income"
-            monthlySalary={monthlySalary + totalIncome}
-            isLoading={isLoading}
-          />
-          <StatsCard
-            statId="expenses"
-            monthlyExpenses={totalExpenses}
-            isLoading={isLoading}
-          />
-          <StatsCard
-            statId="balance"
-            totalBalance={netBalance}
-            isLoading={isLoading}
-          />
+          <StatsCard statId="income"    monthlySalary={monthlySalary + totalIncome} isLoading={isLoading} />
+          <StatsCard statId="expenses"  monthlyExpenses={totalExpenses}             isLoading={isLoading} />
+          <StatsCard statId="balance"   totalBalance={netBalance}                   isLoading={isLoading} />
         </div>
 
         {/* Search + Filter */}
