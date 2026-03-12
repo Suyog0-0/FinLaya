@@ -13,8 +13,6 @@ import RecentTransactions from '@/components/(user)/dashboard/RecentTransactions
 import { supabase } from '@/lib/supabase/client';
 import { useFinancialData } from '@/lib/hooks/useFinancialData';
 
-const SESSION_KEY = 'finlaya_setup_dismissed';
-
 export const dynamic = 'force-static';
 export const revalidate = 60;
 
@@ -38,7 +36,10 @@ export default function DashboardMainContent() {
     const checkSetup = async () => {
       if (!user?.id) return;
 
-      if (sessionStorage.getItem(SESSION_KEY) === 'true') {
+      // Per-user key so switching accounts always re-checks
+      const sessionKey = `finlaya_setup_dismissed_${user.id}`;
+
+      if (sessionStorage.getItem(sessionKey) === 'true') {
         setIsCheckingSetup(false);
         return;
       }
@@ -76,12 +77,12 @@ export default function DashboardMainContent() {
   }, [user]);
 
   const handleDismiss = () => {
-    sessionStorage.setItem(SESSION_KEY, 'true');
+    sessionStorage.setItem(`finlaya_setup_dismissed_${user!.id}`, 'true');
     setShowOnboarding(false);
   };
 
   const handleComplete = () => {
-    sessionStorage.setItem(SESSION_KEY, 'true');
+    sessionStorage.setItem(`finlaya_setup_dismissed_${user!.id}`, 'true');
     setShowOnboarding(false);
     refetch();
     setDataVersion((v) => v + 1);

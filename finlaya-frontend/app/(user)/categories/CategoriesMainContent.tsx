@@ -19,6 +19,7 @@ export default function CategoriesMainContent() {
 
   const [categories, setCategories] = useState<Category[]>([]);
   const [salary, setSalary] = useState(0);
+  const [emiTotal, setEmiTotal] = useState(0);
   const [salaryInput, setSalaryInput] = useState('');
   const [isSalarySaving, setIsSalarySaving] = useState(false);
   const [salarySaved, setSalarySaved] = useState(false);
@@ -44,7 +45,7 @@ export default function CategoriesMainContent() {
         .toISOString()
         .split('T')[0];
 
-      const [catResult, expResult, userResult] = await Promise.all([
+      const [catResult, expResult, userResult, emiResult] = await Promise.all([
         supabase
           .from('budget_categories')
           .select('category_id, category_name, allocation_percentage, budget_limit, current_balance')
@@ -63,6 +64,12 @@ export default function CategoriesMainContent() {
           .select('monthly_salary')
           .eq('user_id', user.id)
           .maybeSingle(),
+
+        supabase
+          .from('emi_payments')
+          .select('emi_amount')
+          .eq('user_id', user.id)
+          .eq('is_active', true),
       ]);
 
       if (cancelled) return;
@@ -70,6 +77,12 @@ export default function CategoriesMainContent() {
       const monthlySalary = userResult.data
         ? Number(userResult.data.monthly_salary)
         : 0;
+
+      // Sum all active EMI monthly amounts
+      const totalEMI = (emiResult.data || []).reduce(
+        (sum, e) => sum + Number(e.emi_amount),
+        0
+      );
 
       const spentMap: Record<number, number> = {};
       (expResult.data || []).forEach((e) => {
@@ -89,6 +102,7 @@ export default function CategoriesMainContent() {
       }));
 
       setSalary(monthlySalary);
+      setEmiTotal(totalEMI);
       setSalaryInput((prev) =>
         prev === '' || prev === '0' ? String(monthlySalary || '') : prev
       );
@@ -97,10 +111,11 @@ export default function CategoriesMainContent() {
     };
 
     run();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [user?.id, trigger]);
+
+  // Salary after EMIs — what's actually available for categories
+  const budgetableSalary = Math.max(0, salary - emiTotal);
 
   // ── Save salary ─────────────────────────────────────────────────────────────
   const handleSaveSalary = async () => {
@@ -131,7 +146,8 @@ export default function CategoriesMainContent() {
   // ── Add category ────────────────────────────────────────────────────────────
   const handleAddCategory = async (name: string, budget: number) => {
     if (!user?.id) return;
-    const pct = salary > 0 ? Math.round((budget / salary) * 100) : 0;
+    // Percentage is relative to budgetable salary (after EMIs)
+    const pct = budgetableSalary > 0 ? Math.round((budget / budgetableSalary) * 100) : 0;
 
     const { error } = await supabase.from('budget_categories').insert({
       user_id: user.id,
@@ -147,10 +163,11 @@ export default function CategoriesMainContent() {
     }
   };
 
-  // ── Edit category (inline) ──────────────────────────────────────────────────
+  // ── Edit category ───────────────────────────────────────────────────────────
   const handleSaveEdit = async (id: number, name: string, budget: number) => {
     if (!user?.id) return;
-    const pct = salary > 0 ? Math.round((budget / salary) * 100) : 0;
+    // Percentage is relative to budgetable salary (after EMIs)
+    const pct = budgetableSalary > 0 ? Math.round((budget / budgetableSalary) * 100) : 0;
 
     await supabase
       .from('budget_categories')
@@ -254,6 +271,7 @@ export default function CategoriesMainContent() {
         {/* ── Allocation overview ───────────────────────────────────────────── */}
         <AllocationOverviewBox
           salary={salary}
+          emiTotal={emiTotal}
           totalBudget={totalBudget}
           totalSpent={totalSpent}
         />
@@ -274,7 +292,7 @@ export default function CategoriesMainContent() {
                 <CategoryCard
                   key={cat.category_id}
                   cat={cat}
-                  salary={salary}
+                  salary={budgetableSalary}
                   onDelete={handleDelete}
                   onSaveEdit={handleSaveEdit}
                 />
@@ -283,7 +301,7 @@ export default function CategoriesMainContent() {
               {showAddCard && (
                 <AddCategoryCard
                   key="add-card"
-                  salary={salary}
+                  salary={budgetableSalary}
                   onSave={handleAddCategory}
                   onCancel={() => setShowAddCard(false)}
                 />

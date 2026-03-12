@@ -1,73 +1,76 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Wallet, Target, ShoppingBag, PiggyBank, Info } from 'lucide-react';
+import { Wallet, Target, ShoppingBag, PiggyBank, Info, CreditCard } from 'lucide-react';
 import { formatNRs } from './utils';
 
 interface AllocationOverviewBoxProps {
   salary: number;
+  emiTotal: number;
   totalBudget: number;
   totalSpent: number;
 }
 
 export default function AllocationOverviewBox({
   salary,
+  emiTotal,
   totalBudget,
   totalSpent,
 }: AllocationOverviewBoxProps) {
-  const remaining = totalBudget - totalSpent;
-  const allocatedPct = salary > 0 ? Math.min((totalBudget / salary) * 100, 100) : 0;
-  const isOverBudget = allocatedPct >= 100;
-  const isNearLimit = allocatedPct >= 80 && allocatedPct < 100;
+  const budgetableSalary = Math.max(0, salary - emiTotal);
+  const remaining = budgetableSalary - totalBudget;
 
-  const getProgressColor = () => {
+  // Percentages relative to full salary so bar segments add up correctly
+  const emiPct    = salary > 0 ? Math.min((emiTotal    / salary) * 100, 100) : 0;
+  const budgetPct = salary > 0 ? Math.min((totalBudget / salary) * 100, 100 - emiPct) : 0;
+
+  // Allocation status is relative to budgetable salary
+  const allocatedOfBudgetable = budgetableSalary > 0 ? (totalBudget / budgetableSalary) * 100 : 0;
+  const isOverBudget = allocatedOfBudgetable > 100;
+  const isNearLimit  = allocatedOfBudgetable >= 80 && allocatedOfBudgetable <= 100;
+
+  const getBudgetColor = () => {
     if (isOverBudget) return 'from-red-400 to-red-500';
-    if (isNearLimit) return 'from-orange-400 to-red-400';
+    if (isNearLimit)  return 'from-orange-400 to-red-400';
     return 'from-emerald-400 to-teal-500';
   };
 
-  const getProgressGlow = () => {
-    if (isOverBudget) return 'shadow-red-200/50';
-    if (isNearLimit) return 'shadow-orange-200/50';
-    return 'shadow-emerald-200/50';
-  };
-
   const stats = [
-    { 
-      label: 'Monthly Salary', 
-      value: formatNRs(salary), 
+    {
+      label: 'Monthly Salary',
+      value: formatNRs(salary),
       icon: Wallet,
       valueColor: 'text-gray-900',
       iconColor: 'text-gray-600',
       bg: 'bg-gray-50',
-      border: 'border-gray-100'
+      border: 'border-gray-100',
     },
-    { 
-      label: 'Total Budget', 
-      value: formatNRs(totalBudget), 
-      icon: Target,
-      valueColor: 'text-gray-900',
-      iconColor: 'text-amber-600',
-      bg: 'bg-amber-50',
-      border: 'border-amber-100'
+    {
+      label: 'EMIs Reserved',
+      value: formatNRs(emiTotal),
+      icon: CreditCard,
+      valueColor: emiTotal > 0 ? 'text-amber-700' : 'text-gray-400',
+      iconColor: emiTotal > 0 ? 'text-amber-600' : 'text-gray-400',
+      bg: emiTotal > 0 ? 'bg-amber-50' : 'bg-gray-50',
+      border: emiTotal > 0 ? 'border-amber-100' : 'border-gray-100',
     },
-    { 
-      label: 'Total Spent', 
-      value: formatNRs(totalSpent), 
+    {
+      label: 'Total Spent',
+      value: formatNRs(totalSpent),
       icon: ShoppingBag,
       valueColor: 'text-gray-900',
       iconColor: 'text-red-600',
       bg: 'bg-red-50',
-      border: 'border-red-100'
+      border: 'border-red-100',
     },
     {
-      label: 'Remaining',
+      label: 'Remaining Budget',
       value: formatNRs(remaining),
       icon: PiggyBank,
       valueColor: remaining >= 0 ? 'text-emerald-600' : 'text-red-500',
       iconColor: remaining >= 0 ? 'text-emerald-600' : 'text-red-500',
       bg: remaining >= 0 ? 'bg-emerald-50' : 'bg-red-50',
-      border: remaining >= 0 ? 'border-emerald-100' : 'border-red-100'
+      border: remaining >= 0 ? 'border-emerald-100' : 'border-red-100',
     },
   ];
 
@@ -83,42 +86,84 @@ export default function AllocationOverviewBox({
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-sm font-semibold ${isOverBudget ? 'text-red-500' : isNearLimit ? 'text-orange-500' : 'text-emerald-600'}`}>
-            {Math.round(allocatedPct)}% allocated
+            {Math.round(allocatedOfBudgetable)}% of available budget
           </span>
-          <button 
+          <button
             className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Learn more about budget allocation"
-            title="This shows what percentage of your salary is allocated to budgets"
+            title="Percentage is calculated against salary minus EMIs"
           >
             <Info size={15} className="text-gray-400 hover:text-gray-600 transition-colors" />
           </button>
         </div>
       </div>
 
-      {/* Progress Bar with Label */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-xs text-gray-500 mb-2.5">
+      {/* Progress bar */}
+      <div className="mb-5">
+        <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
           <span>0%</span>
-          <span className="font-medium text-gray-600">{Math.round(allocatedPct)}% of salary allocated</span>
+          <span className="font-medium text-gray-600">
+            {Math.round(emiPct + budgetPct)}% of salary allocated
+          </span>
           <span>100%</span>
         </div>
-        <div className="relative w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-          {/* 100% marker line */}
-          <div className="absolute top-0 bottom-0 w-px bg-gray-300/60 z-10" style={{ left: '100%' }} />
-          
-          <motion.div
-            className={`h-full rounded-full bg-gradient-to-r ${getProgressColor()} shadow-lg ${getProgressGlow()}`}
-            initial={{ width: 0 }}
-            animate={{ width: `${allocatedPct}%` }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-          />
-          
-          {/* Subtle inner highlight */}
-          <div className="absolute inset-0 rounded-full shadow-[inset_0_1px_3px_rgba(255,255,255,0.4)] pointer-events-none" />
+
+        {/* Segmented bar */}
+        <div className="relative w-full h-4 rounded-full overflow-hidden"
+          style={{
+            background: 'repeating-linear-gradient(90deg, #e5e7eb 0px, #e5e7eb 6px, #f3f4f6 6px, #f3f4f6 12px)',
+            border: '1.5px dashed #d1d5db',
+          }}
+        >
+          {/* EMI segment — blue */}
+          {emiPct > 0 && (
+            <motion.div
+              className="absolute top-0 left-0 h-full bg-blue-500"
+              initial={{ width: 0 }}
+              animate={{ width: `${emiPct}%` }}
+              transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            />
+          )}
+
+          {/* Categories segment — starts right after EMI */}
+          {budgetPct > 0 && (
+            <motion.div
+              className={`absolute top-0 h-full bg-gradient-to-r ${getBudgetColor()}`}
+              style={{ left: `${emiPct}%` }}
+              initial={{ width: 0 }}
+              animate={{ width: `${budgetPct}%` }}
+              transition={{ duration: 0.8, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+            />
+          )}
+
+          {/* White divider between EMI and category segments */}
+          {emiPct > 0 && budgetPct > 0 && (
+            <div
+              className="absolute top-0 h-full w-0.5 bg-white/80 z-10"
+              style={{ left: `${emiPct}%` }}
+            />
+          )}
+        </div>
+
+        {/* Legend */}
+        <div className="flex items-center gap-4 mt-2">
+          {emiTotal > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+              <span className="text-xs text-gray-500">EMIs ({Math.round(emiPct)}%)</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <div className={`w-2.5 h-2.5 rounded-full bg-gradient-to-r ${getBudgetColor()}`} />
+            <span className="text-xs text-gray-500">Categories ({Math.round(budgetPct)}%)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full border border-dashed border-gray-400 bg-gray-100" />
+            <span className="text-xs text-gray-400">Unallocated ({Math.max(0, Math.round(100 - emiPct - budgetPct))}%)</span>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {stats.map((stat, index) => {
           const Icon = stat.icon;
@@ -143,22 +188,21 @@ export default function AllocationOverviewBox({
         })}
       </div>
 
-      {/* Helper text for over budget */}
+      {/* Over budget warning */}
       {isOverBudget && (
         <motion.div
           initial={{ opacity: 0, height: 0 }}
           animate={{ opacity: 1, height: 'auto' }}
-          exit={{ opacity: 0, height: 0 }}
           className="flex items-start gap-2 mt-4 p-3 bg-red-50 border border-red-100 rounded-xl"
         >
           <Info size={14} className="text-red-500 mt-0.5 flex-shrink-0" />
           <p className="text-xs text-red-700 font-medium leading-relaxed">
-            You&apos;ve allocated more than your salary. Consider adjusting your category budgets to stay on track.
+            Your category budgets exceed your available salary after EMIs. Consider adjusting them to stay on track.
           </p>
         </motion.div>
       )}
 
-      {/* Helper text for near limit */}
+      {/* Near limit warning */}
       {isNearLimit && !isOverBudget && (
         <motion.p
           initial={{ opacity: 0 }}
@@ -166,7 +210,7 @@ export default function AllocationOverviewBox({
           className="flex items-center gap-1.5 text-xs text-orange-600 mt-4 font-medium"
         >
           <Info size={12} />
-          You&apos;re close to allocating your full salary. Leave room for unexpected expenses.
+          You&apos;re close to allocating your full available budget. Leave room for unexpected expenses.
         </motion.p>
       )}
     </div>
