@@ -17,7 +17,7 @@ const navLinks = [
   { href: "/expenses", label: "Expenses", icon: Receipt },
   { href: "/categories", label: "Categories", icon: PieChart },
   { href: "/goals", label: "Goals", icon: Target },
-  { href: "/emi-loan", label: "EMI/Loan", icon: CreditCard },
+  { href: "/emis", label: "EMI/Loan", icon: CreditCard },
   { href: "/reports", label: "Reports", icon: BarChart2 },
 ];
 
