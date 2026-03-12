@@ -29,20 +29,37 @@ const DEFAULT_CATEGORIES = [
 
 const STEP_LABELS = ['Salary', 'EMIs', 'Categories', 'Done'];
 
-// Builds category rows using the budgetable salary (after EMI deduction)
+// Largest remainder method — amounts always sum exactly to budgetableSalary
 function buildRows(budgetableSalary: number): CategoryRow[] {
+  const exactAmounts = DEFAULT_CATEGORIES.map((c) => budgetableSalary * (c.percentage / 100));
+  const flooredAmounts = exactAmounts.map((a) => Math.floor(a));
+  const remainder = budgetableSalary - flooredAmounts.reduce((s, a) => s + a, 0);
+  const indices = exactAmounts
+    .map((a, i) => ({ i, frac: a - Math.floor(a) }))
+    .sort((a, b) => b.frac - a.frac)
+    .map((x) => x.i);
+  const finalAmounts = [...flooredAmounts];
+  for (let n = 0; n < remainder; n++) finalAmounts[indices[n]] += 1;
+
   return DEFAULT_CATEGORIES.map((c, i) => ({
     id: `default-${i}`,
     name: c.name,
     percentage: c.percentage,
-    amount: Math.round(budgetableSalary * (c.percentage / 100)),
+    amount: finalAmounts[i],
     enabled: true,
     isEditing: false,
   }));
 }
 
 function makeEMI(): EMIRow {
-  return { id: `emi-${Date.now()}`, loanName: '', monthlyAmount: '', totalRemaining: '', dueDate: '' };
+  return {
+    id: `emi-${Date.now()}`,
+    loanName: '',
+    monthlyAmount: '',
+    totalRemaining: '',
+    dueDate: '',
+    startDate: new Date().toISOString().split('T')[0],
+  };
 }
 
 export default function OnboardingModal({ isOpen, onClose, onComplete }: OnboardingModalProps) {
@@ -71,10 +88,9 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   // Core derived values
   const salaryNum = parseFloat(salary) || 0;
   const totalMonthlyEMI = emis.reduce((sum, e) => sum + (parseFloat(e.monthlyAmount) || 0), 0);
-  // The salary available for categories after EMIs are accounted for
   const budgetableSalary = Math.max(0, salaryNum - totalMonthlyEMI);
 
-  // Rebuild rows whenever the budgetable salary changes (salary or EMIs change)
+  // Rebuild rows whenever budgetable salary changes
   useEffect(() => {
     setRows(buildRows(budgetableSalary));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -127,8 +143,13 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
         setEmiError('Please enter a valid monthly amount for each EMI.');
         return;
       }
+      const m = parseFloat(emi.monthlyAmount);
+      const t = parseFloat(emi.totalRemaining);
+      if (t > 0 && m > t) {
+        setEmiError(`Monthly EMI for "${emi.loanName}" exceeds total remaining amount.`);
+        return;
+      }
     }
-    // Warn if EMIs exceed full salary
     if (totalMonthlyEMI >= salaryNum) {
       setEmiError('Your total EMIs equal or exceed your salary. Please review.');
       return;
@@ -193,7 +214,6 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
         return;
       }
 
-      // Over-allocation guard (against budgetable salary)
       const totalAllocated = rows.filter((r) => r.enabled).reduce((s, r) => s + r.amount, 0);
       if (totalAllocated > budgetableSalary) {
         setError('Total category amounts exceed your available budget after EMIs.');
@@ -227,14 +247,13 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
       // Save EMIs
       await supabase.from('emi_payments').delete().eq('user_id', user.id);
       if (emis.length > 0) {
-        const today = new Date().toISOString().split('T')[0];
         const emisToInsert = emis.map((e) => ({
           user_id: user.id,
           loan_name: e.loanName.trim(),
           emi_amount: parseFloat(e.monthlyAmount) || 0,
           total_amount: parseFloat(e.totalRemaining) || 0,
           payment_day: parseInt(e.dueDate) || null,
-          start_date: today,
+          start_date: e.startDate || new Date().toISOString().split('T')[0],
           is_active: true,
         }));
         const { error: emiErr } = await supabase.from('emi_payments').insert(emisToInsert);
@@ -271,7 +290,6 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
             className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
             onClick={onClose}
           />
-
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 24 }}
@@ -305,11 +323,9 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                 <div className="flex gap-2">
                   {STEP_LABELS.map((label, i) => (
                     <div key={label} className="flex-1">
-                      <div
-                        className={`h-1.5 rounded-full transition-colors duration-300 ${
-                          i <= step ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gray-100'
-                        }`}
-                      />
+                      <div className={`h-1.5 rounded-full transition-colors duration-300 ${
+                        i <= step ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gray-100'
+                      }`} />
                       <p className={`text-xs mt-1 text-center font-medium ${i <= step ? 'text-orange-500' : 'text-gray-300'}`}>
                         {label}
                       </p>
