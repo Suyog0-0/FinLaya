@@ -18,59 +18,62 @@ export default function AllocationOverviewBox({
   totalSpent,
 }: AllocationOverviewBoxProps) {
   const budgetableSalary = Math.max(0, salary - emiTotal);
-  const remaining = budgetableSalary - totalBudget;
+  const remaining        = budgetableSalary - totalBudget;
 
-  // Percentages relative to full salary so bar segments add up correctly
-  const emiPct    = salary > 0 ? Math.min((emiTotal    / salary) * 100, 100) : 0;
-  const budgetPct = salary > 0 ? Math.min((totalBudget / salary) * 100, 100 - emiPct) : 0;
+  // Percentages relative to full salary so bar segments sum correctly
+  const emiPct    = salary > 0 ? Math.min((emiTotal    / salary) * 100, 100)             : 0;
+  const budgetPct = salary > 0 ? Math.min((totalBudget / salary) * 100, 100 - emiPct)    : 0;
 
-  // Allocation status is relative to budgetable salary
-  const allocatedOfBudgetable = budgetableSalary > 0 ? (totalBudget / budgetableSalary) * 100 : 0;
+  // Allocation status relative to budgetable salary
+  const allocatedOfBudgetable = budgetableSalary > 0
+    ? (totalBudget / budgetableSalary) * 100
+    : 0;
   const isOverBudget = allocatedOfBudgetable > 100;
   const isNearLimit  = allocatedOfBudgetable >= 80 && allocatedOfBudgetable <= 100;
 
-  const getBudgetColor = () => {
-    if (isOverBudget) return 'from-red-400 to-red-500';
-    if (isNearLimit)  return 'from-orange-400 to-red-400';
-    return 'from-emerald-400 to-teal-500';
+  // Flat bar color — no gradient
+  const getBudgetBarColor = () => {
+    if (isOverBudget) return 'bg-red-500';
+    if (isNearLimit)  return 'bg-orange-400';
+    return 'bg-emerald-500';
   };
 
   const stats = [
     {
-      label: 'Monthly Salary',
-      value: formatNRs(salary),
-      icon: Wallet,
+      label:      'Monthly Salary',
+      value:      formatNRs(salary),
+      icon:       Wallet,
       valueColor: 'text-gray-900',
-      iconColor: 'text-gray-600',
-      bg: 'bg-gray-50',
-      border: 'border-gray-100',
+      iconColor:  'text-gray-600',
+      bg:         'bg-gray-50',
+      border:     'border-gray-100',
     },
     {
-      label: 'EMIs Reserved',
-      value: formatNRs(emiTotal),
-      icon: CreditCard,
+      label:      'EMIs Reserved',
+      value:      formatNRs(emiTotal),
+      icon:       CreditCard,
       valueColor: emiTotal > 0 ? 'text-amber-700' : 'text-gray-400',
-      iconColor: emiTotal > 0 ? 'text-amber-600' : 'text-gray-400',
-      bg: emiTotal > 0 ? 'bg-amber-50' : 'bg-gray-50',
-      border: emiTotal > 0 ? 'border-amber-100' : 'border-gray-100',
+      iconColor:  emiTotal > 0 ? 'text-amber-600' : 'text-gray-400',
+      bg:         emiTotal > 0 ? 'bg-amber-50'    : 'bg-gray-50',
+      border:     emiTotal > 0 ? 'border-amber-100' : 'border-gray-100',
     },
     {
-      label: 'Total Spent',
-      value: formatNRs(totalSpent),
-      icon: ShoppingBag,
+      label:      'Total Spent',
+      value:      formatNRs(totalSpent),
+      icon:       ShoppingBag,
       valueColor: 'text-gray-900',
-      iconColor: 'text-red-600',
-      bg: 'bg-red-50',
-      border: 'border-red-100',
+      iconColor:  'text-red-600',
+      bg:         'bg-red-50',
+      border:     'border-red-100',
     },
     {
-      label: 'Remaining Budget',
-      value: formatNRs(remaining),
-      icon: PiggyBank,
+      label:      'Remaining Budget',
+      value:      formatNRs(remaining),
+      icon:       PiggyBank,
       valueColor: remaining >= 0 ? 'text-emerald-600' : 'text-red-500',
-      iconColor: remaining >= 0 ? 'text-emerald-600' : 'text-red-500',
-      bg: remaining >= 0 ? 'bg-emerald-50' : 'bg-red-50',
-      border: remaining >= 0 ? 'border-emerald-100' : 'border-red-100',
+      iconColor:  remaining >= 0 ? 'text-emerald-600' : 'text-red-500',
+      bg:         remaining >= 0 ? 'bg-emerald-50'    : 'bg-red-50',
+      border:     remaining >= 0 ? 'border-emerald-100' : 'border-red-100',
     },
   ];
 
@@ -79,13 +82,15 @@ export default function AllocationOverviewBox({
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 flex items-center justify-center border border-amber-100">
+          <div className="w-9 h-9 rounded-xl bg-amber-50 flex items-center justify-center border border-amber-100">
             <Target size={18} className="text-amber-600" strokeWidth={2} />
           </div>
           <p className="font-semibold text-gray-900">Allocation Overview</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-sm font-semibold ${isOverBudget ? 'text-red-500' : isNearLimit ? 'text-orange-500' : 'text-emerald-600'}`}>
+          <span className={`text-sm font-semibold ${
+            isOverBudget ? 'text-red-500' : isNearLimit ? 'text-orange-500' : 'text-emerald-600'
+          }`}>
             {Math.round(allocatedOfBudgetable)}% of available budget
           </span>
           <button
@@ -108,7 +113,8 @@ export default function AllocationOverviewBox({
         </div>
 
         {/* Segmented bar */}
-        <div className="relative w-full h-4 rounded-full overflow-hidden"
+        <div
+          className="relative w-full h-4 rounded-full overflow-hidden"
           style={{
             background: 'repeating-linear-gradient(90deg, #e5e7eb 0px, #e5e7eb 6px, #f3f4f6 6px, #f3f4f6 12px)',
             border: '1.5px dashed #d1d5db',
@@ -124,10 +130,10 @@ export default function AllocationOverviewBox({
             />
           )}
 
-          {/* Categories segment — starts right after EMI */}
+          {/* Categories segment — starts right after EMI, flat color */}
           {budgetPct > 0 && (
             <motion.div
-              className={`absolute top-0 h-full bg-gradient-to-r ${getBudgetColor()}`}
+              className={`absolute top-0 h-full ${getBudgetBarColor()}`}
               style={{ left: `${emiPct}%` }}
               initial={{ width: 0 }}
               animate={{ width: `${budgetPct}%` }}
@@ -135,7 +141,7 @@ export default function AllocationOverviewBox({
             />
           )}
 
-          {/* White divider between EMI and category segments */}
+          {/* White divider between segments */}
           {emiPct > 0 && budgetPct > 0 && (
             <div
               className="absolute top-0 h-full w-0.5 bg-white/80 z-10"
@@ -153,12 +159,14 @@ export default function AllocationOverviewBox({
             </div>
           )}
           <div className="flex items-center gap-1.5">
-            <div className={`w-2.5 h-2.5 rounded-full bg-gradient-to-r ${getBudgetColor()}`} />
+            <div className={`w-2.5 h-2.5 rounded-full ${getBudgetBarColor()}`} />
             <span className="text-xs text-gray-500">Categories ({Math.round(budgetPct)}%)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full border border-dashed border-gray-400 bg-gray-100" />
-            <span className="text-xs text-gray-400">Unallocated ({Math.max(0, Math.round(100 - emiPct - budgetPct))}%)</span>
+            <span className="text-xs text-gray-400">
+              Unallocated ({Math.max(0, Math.round(100 - emiPct - budgetPct))}%)
+            </span>
           </div>
         </div>
       </div>
@@ -181,7 +189,9 @@ export default function AllocationOverviewBox({
                   <Icon size={16} className={stat.iconColor} strokeWidth={2} />
                 </div>
               </div>
-              <p className={`text-lg font-bold ${stat.valueColor} tabular-nums tracking-tight`}>{stat.value}</p>
+              <p className={`text-lg font-bold ${stat.valueColor} tabular-nums tracking-tight`}>
+                {stat.value}
+              </p>
               <p className="text-xs text-gray-500 mt-1.5 font-medium">{stat.label}</p>
             </motion.div>
           );

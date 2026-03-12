@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Pencil, Trash2, Check, X, Save } from 'lucide-react';
+import { Pencil, Trash2, Check, X } from 'lucide-react';
 import { Category, getCategoryIcon, getBarColor, formatNRs } from './utils';
 
 interface CategoryCardProps {
@@ -22,26 +22,41 @@ export default function CategoryCard({
   const [editName, setEditName] = useState(cat.category_name);
   const [editBudget, setEditBudget] = useState(String(cat.budget_limit));
   const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const { Icon, colorClass } = getCategoryIcon(cat.category_name);
   const budget = cat.budget_limit;
-  const spent = cat.spent;
-  const pct = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
-  const salaryPct = salary > 0 ? Math.round((budget / salary) * 100) : cat.allocation_percentage;
-  const barColor = getBarColor(spent, budget);
-  const isOver = spent > budget && budget > 0;
+  const spent  = cat.spent;
+  const pct    = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0;
 
-  const editPct =
-    salary > 0 && editBudget
-      ? Math.round((parseFloat(editBudget) / salary) * 100)
-      : 0;
+  // Cap at 100 so salary=1 doesn't show "-4%" or "30000%"
+  const salaryPct = salary > 0
+    ? Math.min(Math.round((budget / salary) * 100), 100)
+    : cat.allocation_percentage;
+
+  const barColor = getBarColor(spent, budget);
+  const isOver   = spent > budget && budget > 0;
+
+  const editBudgetNum = parseFloat(editBudget) || 0;
+  const editPct       = salary > 0 && editBudgetNum > 0
+    ? Math.min(Math.round((editBudgetNum / salary) * 100), 100)
+    : 0;
 
   const handleSave = async () => {
+    const newBudget = parseFloat(editBudget) || 0;
+
+    // Validate: budget cannot exceed full salary
+    if (salary > 0 && newBudget > salary) {
+      setEditError(`Budget cannot exceed your salary of ${formatNRs(salary)}.`);
+      return;
+    }
+
+    setEditError('');
     setSaving(true);
     await onSaveEdit(
       cat.category_id,
       editName.trim() || cat.category_name,
-      parseFloat(editBudget) || 0
+      newBudget
     );
     setSaving(false);
     setIsEditing(false);
@@ -50,6 +65,7 @@ export default function CategoryCard({
   const handleCancel = () => {
     setEditName(cat.category_name);
     setEditBudget(String(cat.budget_limit));
+    setEditError('');
     setIsEditing(false);
   };
 
@@ -114,7 +130,7 @@ export default function CategoryCard({
         </div>
       </div>
 
-      {/* Name / edit fields */}
+      {/* Name + budget edit fields */}
       {isEditing ? (
         <div className="space-y-3">
           <div>
@@ -143,13 +159,30 @@ export default function CategoryCard({
               <input
                 type="number"
                 value={editBudget}
-                onChange={(e) => setEditBudget(e.target.value)}
+                onChange={(e) => {
+                  setEditBudget(e.target.value);
+                  setEditError('');
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                 min="0"
-                className="w-full pl-10 pr-3 py-2 text-sm border border-gray-200 rounded-lg outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 text-gray-800 font-medium"
+                className={`w-full pl-10 pr-3 py-2 text-sm border rounded-lg outline-none focus:ring-2 text-gray-800 font-medium transition-colors ${
+                  editError
+                    ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                    : 'border-gray-200 focus:border-orange-400 focus:ring-orange-100'
+                }`}
                 placeholder="0"
               />
             </div>
+            {/* Inline error */}
+            {editError && (
+              <motion.p
+                initial={{ opacity: 0, y: -3 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-xs text-red-500 mt-1.5 font-medium"
+              >
+                {editError}
+              </motion.p>
+            )}
           </div>
         </div>
       ) : (
