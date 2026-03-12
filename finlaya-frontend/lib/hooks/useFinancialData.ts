@@ -58,6 +58,7 @@ export function useFinancialData(): FinancialData {
           { data: expensesData, error: expensesError },
           { data: incomeData },
           { data: goalsData },
+          { data: emiData },
         ] = await Promise.all([
           supabase
             .from('expenses')
@@ -73,6 +74,12 @@ export function useFinancialData(): FinancialData {
             .from('goals')
             .select('saved_amount')
             .eq('user_id', user.id),
+          // Active EMIs — deducted from savings every month
+          supabase
+            .from('emi_payments')
+            .select('emi_amount')
+            .eq('user_id', user.id)
+            .eq('is_active', true),
         ]);
 
         if (expensesError) {
@@ -82,20 +89,25 @@ export function useFinancialData(): FinancialData {
         }
 
         const totalExpenses = (expensesData || []).reduce(
-          (sum, e) => sum + Number(e.amount),
-          0
+          (sum, e) => sum + Number(e.amount), 0
         );
         const incomeTableSum = (incomeData || []).reduce(
-          (sum, i) => sum + Number(i.amount),
-          0
+          (sum, i) => sum + Number(i.amount), 0
         );
         const totalGoalSavings = (goalsData || []).reduce(
-          (sum, g) => sum + Number(g.saved_amount ?? 0),
-          0
+          (sum, g) => sum + Number(g.saved_amount ?? 0), 0
+        );
+        const totalMonthlyEMI = (emiData || []).reduce(
+          (sum, e) => sum + Number(e.emi_amount), 0
         );
 
         const totalIncome = salary + incomeTableSum;
-        const computedSavings = Math.max(0, totalIncome - totalExpenses - totalGoalSavings);
+
+        // Savings = income minus expenses, goal contributions, and monthly EMIs
+        const computedSavings = Math.max(
+          0,
+          totalIncome - totalExpenses - totalGoalSavings - totalMonthlyEMI
+        );
 
         setMonthlyExpenses(totalExpenses);
         setSavings(computedSavings);
