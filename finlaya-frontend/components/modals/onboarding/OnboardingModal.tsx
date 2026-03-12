@@ -6,14 +6,14 @@ import { X, Wallet } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import OnboardingModalSalaryInput0 from '../onboarding/OnboardingModal-SalaryInput-0';
-import OnboardingModalCategorySetup1, { CategoryRow } from '../onboarding/OnboardingModal-CategorySetup-1';
-import OnboardingModalDone2 from '../onboarding/OnboardingModal-Success-2';
-
+import OnboardingModalEMISetup1, { EMIRow } from '../onboarding/OnboardingModal-EMISetup-1';
+import OnboardingModalCategorySetup2, { CategoryRow } from '../onboarding/OnboardingModal-CategorySetup-1';
+import OnboardingModalDone3 from '../onboarding/OnboardingModal-Success-2';
 
 interface OnboardingModalProps {
   isOpen: boolean;
-  onClose: () => void;    // skip/dismiss
-  onComplete: () => void; // finished setup
+  onClose: () => void;
+  onComplete: () => void;
 }
 
 const DEFAULT_CATEGORIES = [
@@ -25,19 +25,24 @@ const DEFAULT_CATEGORIES = [
   { name: 'Entertainment', percentage: 5 },
   { name: 'Savings', percentage: 20 },
   { name: 'Others', percentage: 5 },
-]; 
+];
 
-const STEP_LABELS = ['Salary', 'Categories', 'Done'];
+const STEP_LABELS = ['Salary', 'EMIs', 'Categories', 'Done'];
 
-function buildRows(salary: number): CategoryRow[] {
+// Builds category rows using the budgetable salary (after EMI deduction)
+function buildRows(budgetableSalary: number): CategoryRow[] {
   return DEFAULT_CATEGORIES.map((c, i) => ({
     id: `default-${i}`,
     name: c.name,
     percentage: c.percentage,
-    amount: Math.round(salary * (c.percentage / 100)),
+    amount: Math.round(budgetableSalary * (c.percentage / 100)),
     enabled: true,
     isEditing: false,
   }));
+}
+
+function makeEMI(): EMIRow {
+  return { id: `emi-${Date.now()}`, loanName: '', monthlyAmount: '', totalRemaining: '', dueDate: '' };
 }
 
 export default function OnboardingModal({ isOpen, onClose, onComplete }: OnboardingModalProps) {
@@ -45,36 +50,43 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
 
-  // Step 1 state
+  // Step 0 — Salary
   const [salary, setSalary] = useState('');
 
-  // Step 2 state
+  // Step 1 — EMIs
+  const [emis, setEmis] = useState<EMIRow[]>([]);
+  const [noEMI, setNoEMI] = useState(false);
+  const [emiError, setEmiError] = useState('');
+
+  // Step 2 — Categories
   const [rows, setRows] = useState<CategoryRow[]>([]);
   const [newCatName, setNewCatName] = useState('');
   const [newCatAmount, setNewCatAmount] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
 
-  // Saving state
+  // Shared
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Rebuild rows when salary changes
-  useEffect(() => {
-    const s = parseFloat(salary) || 0;
-    setRows(buildRows(s));
-  }, [salary]);
+  // Core derived values
+  const salaryNum = parseFloat(salary) || 0;
+  const totalMonthlyEMI = emis.reduce((sum, e) => sum + (parseFloat(e.monthlyAmount) || 0), 0);
+  // The salary available for categories after EMIs are accounted for
+  const budgetableSalary = Math.max(0, salaryNum - totalMonthlyEMI);
 
-  // Disable background scroll when modal is open
+  // Rebuild rows whenever the budgetable salary changes (salary or EMIs change)
+  useEffect(() => {
+    setRows(buildRows(budgetableSalary));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [budgetableSalary]);
+
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = '';
     }
-
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
   const goTo = (next: number) => {
@@ -82,16 +94,59 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     setStep(next);
   };
 
-  // Row helpers
+  // ── EMI helpers ──────────────────────────────────────
+  const addEMI = () => {
+    setNoEMI(false);
+    setEmis((prev) => [...prev, makeEMI()]);
+  };
+
+  const removeEMI = (id: string) => setEmis((prev) => prev.filter((e) => e.id !== id));
+
+  const updateEMI = (id: string, field: keyof EMIRow, value: string) =>
+    setEmis((prev) => prev.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
+
+  const toggleNoEMI = () => {
+    setNoEMI((v) => {
+      if (!v) setEmis([]);
+      return !v;
+    });
+    setEmiError('');
+  };
+
+  const handleEMINext = () => {
+    if (emis.length === 0 && !noEMI) {
+      setEmiError('Please add your EMIs or confirm you have none.');
+      return;
+    }
+    for (const emi of emis) {
+      if (!emi.loanName.trim()) {
+        setEmiError('Please enter a name for each EMI.');
+        return;
+      }
+      if (!emi.monthlyAmount || parseFloat(emi.monthlyAmount) <= 0) {
+        setEmiError('Please enter a valid monthly amount for each EMI.');
+        return;
+      }
+    }
+    // Warn if EMIs exceed full salary
+    if (totalMonthlyEMI >= salaryNum) {
+      setEmiError('Your total EMIs equal or exceed your salary. Please review.');
+      return;
+    }
+    setEmiError('');
+    goTo(2);
+  };
+
+  // ── Category helpers ─────────────────────────────────
   const toggleRow = (id: string) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
 
   const updateAmount = (id: string, raw: string) => {
     const amount = parseFloat(raw) || 0;
-    const s = parseFloat(salary) || 1;
+    const base = budgetableSalary || 1;
     setRows((prev) =>
       prev.map((r) =>
-        r.id === id ? { ...r, amount, percentage: Math.round((amount / s) * 100) } : r
+        r.id === id ? { ...r, amount, percentage: Math.round((amount / base) * 100) } : r
       )
     );
   };
@@ -108,14 +163,14 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     const name = newCatName.trim();
     const amount = parseFloat(newCatAmount) || 0;
     if (!name) return;
-    const s = parseFloat(salary) || 1;
+    const base = budgetableSalary || 1;
     setRows((prev) => [
       ...prev,
       {
         id: `custom-${Date.now()}`,
         name,
         amount,
-        percentage: Math.round((amount / s) * 100),
+        percentage: Math.round((amount / base) * 100),
         enabled: true,
         isEditing: false,
       },
@@ -125,16 +180,23 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     setShowAddRow(false);
   };
 
-  // Save to Supabase
+  // ── Save ─────────────────────────────────────────────
   const handleSave = async () => {
     if (!user?.id) return;
     setIsSaving(true);
     setError('');
 
     try {
-      const salaryNum = parseFloat(salary);
       if (!salaryNum || salaryNum <= 0) {
         setError('Please enter a valid salary.');
+        setIsSaving(false);
+        return;
+      }
+
+      // Over-allocation guard (against budgetable salary)
+      const totalAllocated = rows.filter((r) => r.enabled).reduce((s, r) => s + r.amount, 0);
+      if (totalAllocated > budgetableSalary) {
+        setError('Total category amounts exceed your available budget after EMIs.');
         setIsSaving(false);
         return;
       }
@@ -144,13 +206,10 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
         .from('users')
         .update({ monthly_salary: salaryNum, updated_at: new Date().toISOString() })
         .eq('user_id', user.id);
-
       if (salaryErr) throw salaryErr;
 
-      // Delete existing categories
+      // Save categories
       await supabase.from('budget_categories').delete().eq('user_id', user.id);
-
-      // Insert enabled categories
       const toInsert = rows
         .filter((r) => r.enabled && r.name.trim())
         .map((r) => ({
@@ -160,13 +219,29 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
           budget_limit: r.amount,
           current_balance: r.amount,
         }));
-
       if (toInsert.length > 0) {
         const { error: catErr } = await supabase.from('budget_categories').insert(toInsert);
         if (catErr) throw catErr;
       }
 
-      goTo(2);
+      // Save EMIs
+      await supabase.from('emi_payments').delete().eq('user_id', user.id);
+      if (emis.length > 0) {
+        const today = new Date().toISOString().split('T')[0];
+        const emisToInsert = emis.map((e) => ({
+          user_id: user.id,
+          loan_name: e.loanName.trim(),
+          emi_amount: parseFloat(e.monthlyAmount) || 0,
+          total_amount: parseFloat(e.totalRemaining) || 0,
+          payment_day: parseInt(e.dueDate) || null,
+          start_date: today,
+          is_active: true,
+        }));
+        const { error: emiErr } = await supabase.from('emi_payments').insert(emisToInsert);
+        if (emiErr) throw emiErr;
+      }
+
+      goTo(3);
     } catch (err: unknown) {
       console.error('[OnboardingModal] save error:', err);
       setError('Something went wrong. Please try again.');
@@ -175,7 +250,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     }
   };
 
-  // Animation variants
+  // ── Animation ────────────────────────────────────────
   const variants = {
     enter: (d: number) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
     center: { x: 0, opacity: 1 },
@@ -183,12 +258,12 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   };
 
   const enabledCount = rows.filter((r) => r.enabled).length;
+  const stepTitle = ['Set Up Your Budget', 'Your EMIs', 'Customize Categories', "You're All Set!"];
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -197,7 +272,6 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
             onClick={onClose}
           />
 
-          {/* Modal */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 24 }}
@@ -213,15 +287,11 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                       <Wallet className="text-white" size={20} />
                     </div>
                     <div>
-                      <h2 className="text-lg font-bold text-gray-900">
-                        {step === 0 && 'Set Up Your Budget'}
-                        {step === 1 && 'Customize Categories'}
-                        {step === 2 && "You're All Set!"}
-                      </h2>
-                      <p className="text-xs text-gray-400">Step {step + 1} of 3</p>
+                      <h2 className="text-lg font-bold text-gray-900">{stepTitle[step]}</h2>
+                      <p className="text-xs text-gray-400">Step {step + 1} of 4</p>
                     </div>
                   </div>
-                  {step < 2 && (
+                  {step < 3 && (
                     <button
                       onClick={onClose}
                       className="text-gray-400 hover:text-gray-600 transition-colors text-sm flex items-center gap-1"
@@ -248,19 +318,11 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                 </div>
               </div>
 
-              {/* Step content with animation */}
+              {/* Step content */}
               <div className="relative overflow-hidden" style={{ minHeight: 320 }}>
                 <AnimatePresence custom={direction} mode="wait">
                   {step === 0 && (
-                    <motion.div
-                      key="step-0"
-                      custom={direction}
-                      variants={variants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.22, ease: 'easeInOut' }}
-                    >
+                    <motion.div key="step-0" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
                       <OnboardingModalSalaryInput0
                         salary={salary}
                         onSalaryChange={setSalary}
@@ -272,17 +334,26 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                   )}
 
                   {step === 1 && (
-                    <motion.div
-                      key="step-1"
-                      custom={direction}
-                      variants={variants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.22, ease: 'easeInOut' }}
-                    >
-                      <OnboardingModalCategorySetup1
-                        salary={parseFloat(salary) || 0}
+                    <motion.div key="step-1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
+                      <OnboardingModalEMISetup1
+                        emis={emis}
+                        noEMI={noEMI}
+                        error={emiError}
+                        onAddEMI={addEMI}
+                        onRemoveEMI={removeEMI}
+                        onUpdateEMI={updateEMI}
+                        onToggleNoEMI={toggleNoEMI}
+                        onBack={() => goTo(0)}
+                        onNext={handleEMINext}
+                      />
+                    </motion.div>
+                  )}
+
+                  {step === 2 && (
+                    <motion.div key="step-2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
+                      <OnboardingModalCategorySetup2
+                        salary={budgetableSalary}
+                        reservedForEMI={totalMonthlyEMI}
                         rows={rows}
                         error={error}
                         newCatName={newCatName}
@@ -298,23 +369,15 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                         onNewCatAmountChange={setNewCatAmount}
                         onAddCustomRow={addCustomRow}
                         onToggleAddRow={() => setShowAddRow((v) => !v)}
-                        onBack={() => goTo(0)}
+                        onBack={() => goTo(1)}
                         onSave={handleSave}
                       />
                     </motion.div>
                   )}
 
-                  {step === 2 && (
-                    <motion.div
-                      key="step-2"
-                      custom={direction}
-                      variants={variants}
-                      initial="enter"
-                      animate="center"
-                      exit="exit"
-                      transition={{ duration: 0.22, ease: 'easeInOut' }}
-                    >
-                      <OnboardingModalDone2
+                  {step === 3 && (
+                    <motion.div key="step-3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
+                      <OnboardingModalDone3
                         salary={salary}
                         enabledCount={enabledCount}
                         onComplete={onComplete}

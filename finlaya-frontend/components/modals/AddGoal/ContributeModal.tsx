@@ -5,7 +5,6 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Target, Plus } from 'lucide-react';
 
-// Define the interface for ContributeModal specifically
 interface ContributeModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -28,23 +27,31 @@ export default function ContributeModal({
   const [amount, setAmount] = useState('');
   const [error, setError] = useState('');
 
+  const progressPercent = targetAmount > 0 ? Math.min((savedAmount / targetAmount) * 100, 100) : 0;
+  const remaining = Math.max(0, targetAmount - savedAmount);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const parsedAmount = parseFloat(amount);
-    
+
     if (isNaN(parsedAmount) || parsedAmount <= 0) {
       setError('Please enter a valid amount.');
       return;
     }
-    
+
     if (parsedAmount > availableSavings) {
       setError('Amount exceeds available savings.');
       return;
     }
 
+    if (parsedAmount > remaining) {
+      setError(`Amount exceeds remaining goal balance of NRs ${remaining.toLocaleString()}.`);
+      return;
+    }
+
     setError('');
     await onContribute(parsedAmount);
-    setAmount(''); // Clear amount after successful contribution
+    setAmount('');
   };
 
   const handleClose = () => {
@@ -55,9 +62,6 @@ export default function ContributeModal({
   const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none text-sm transition-all bg-slate-50 focus:bg-white";
 
   if (!isOpen) return null;
-
-  const progressPercent = targetAmount > 0 ? Math.min((savedAmount / targetAmount) * 100, 100) : 0;
-  const remaining = Math.max(0, targetAmount - savedAmount);
 
   return (
     <AnimatePresence>
@@ -74,7 +78,7 @@ export default function ContributeModal({
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="bg-white w-full max-w-lg rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto"
-          onClick={(e) => e.stopPropagation()} // Prevent click inside modal from closing
+          onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
