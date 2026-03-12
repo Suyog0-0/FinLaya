@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Wallet } from 'lucide-react';
+import { X } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import OnboardingModalSalaryInput0 from '../onboarding/OnboardingModal-SalaryInput-0';
 import OnboardingModalEMISetup1, { EMIRow } from '../onboarding/OnboardingModal-EMISetup-1';
-import OnboardingModalCategorySetup2, { CategoryRow } from '../onboarding/OnboardingModal-CategorySetup-1';
-import OnboardingModalDone3 from '../onboarding/OnboardingModal-Success-2';
+import OnboardingModalCategorySetup1, { CategoryRow } from '../onboarding/OnboardingModal-CategorySetup-1';
+import OnboardingModalSuccess2 from '../onboarding/OnboardingModal-Success-2';
 
 interface OnboardingModalProps {
   isOpen: boolean;
@@ -27,9 +27,16 @@ const DEFAULT_CATEGORIES = [
   { name: 'Others', percentage: 5 },
 ];
 
-const STEP_LABELS = ['Salary', 'EMIs', 'Categories', 'Done'];
+const STEPS = ['Salary', 'EMIs', 'Categories', 'Done'];
 
-// Largest remainder method — amounts always sum exactly to budgetableSalary
+const STEP_TITLES = [
+  'Set up your salary',
+  'Any active loans?',
+  'Customize categories',
+  "You're all set!",
+];
+
+// Largest remainder method — sums exactly to budgetableSalary
 function buildRows(budgetableSalary: number): CategoryRow[] {
   const exactAmounts = DEFAULT_CATEGORIES.map((c) => budgetableSalary * (c.percentage / 100));
   const flooredAmounts = exactAmounts.map((a) => Math.floor(a));
@@ -39,7 +46,7 @@ function buildRows(budgetableSalary: number): CategoryRow[] {
     .sort((a, b) => b.frac - a.frac)
     .map((x) => x.i);
   const finalAmounts = [...flooredAmounts];
-  for (let n = 0; n < remainder; n++) finalAmounts[indices[n]] += 1;
+  for (let n = 0; n < Math.round(remainder); n++) finalAmounts[indices[n]] += 1;
 
   return DEFAULT_CATEGORIES.map((c, i) => ({
     id: `default-${i}`,
@@ -67,41 +74,29 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
 
-  // Step 0 — Salary
   const [salary, setSalary] = useState('');
-
-  // Step 1 — EMIs
   const [emis, setEmis] = useState<EMIRow[]>([]);
   const [noEMI, setNoEMI] = useState(false);
   const [emiError, setEmiError] = useState('');
-
-  // Step 2 — Categories
   const [rows, setRows] = useState<CategoryRow[]>([]);
   const [newCatName, setNewCatName] = useState('');
   const [newCatAmount, setNewCatAmount] = useState('');
   const [showAddRow, setShowAddRow] = useState(false);
-
-  // Shared
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Core derived values
   const salaryNum = parseFloat(salary) || 0;
   const totalMonthlyEMI = emis.reduce((sum, e) => sum + (parseFloat(e.monthlyAmount) || 0), 0);
   const budgetableSalary = Math.max(0, salaryNum - totalMonthlyEMI);
 
-  // Rebuild rows whenever budgetable salary changes
+  // Rebuild recommended rows whenever budgetable salary changes
   useEffect(() => {
     setRows(buildRows(budgetableSalary));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [budgetableSalary]);
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    document.body.style.overflow = isOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
 
@@ -111,82 +106,56 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
   };
 
   // ── EMI helpers ──────────────────────────────────────
-  const addEMI = () => {
-    setNoEMI(false);
-    setEmis((prev) => [...prev, makeEMI()]);
-  };
-
-  const removeEMI = (id: string) => setEmis((prev) => prev.filter((e) => e.id !== id));
-
+  const addEMI = () => { setNoEMI(false); setEmis((p) => [...p, makeEMI()]); };
+  const removeEMI = (id: string) => setEmis((p) => p.filter((e) => e.id !== id));
   const updateEMI = (id: string, field: keyof EMIRow, value: string) =>
-    setEmis((prev) => prev.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
-
+    setEmis((p) => p.map((e) => (e.id === id ? { ...e, [field]: value } : e)));
   const toggleNoEMI = () => {
-    setNoEMI((v) => {
-      if (!v) setEmis([]);
-      return !v;
-    });
+    setNoEMI((v) => { if (!v) setEmis([]); return !v; });
     setEmiError('');
   };
-
   const handleEMINext = () => {
-    if (emis.length === 0 && !noEMI) {
-      setEmiError('Please add your EMIs or confirm you have none.');
-      return;
-    }
+    if (emis.length === 0 && !noEMI) { setEmiError('Please add your EMIs or confirm you have none.'); return; }
     for (const emi of emis) {
-      if (!emi.loanName.trim()) {
-        setEmiError('Please enter a name for each EMI.');
-        return;
-      }
-      if (!emi.monthlyAmount || parseFloat(emi.monthlyAmount) <= 0) {
-        setEmiError('Please enter a valid monthly amount for each EMI.');
-        return;
-      }
-      const m = parseFloat(emi.monthlyAmount);
-      const t = parseFloat(emi.totalRemaining);
-      if (t > 0 && m > t) {
-        setEmiError(`Monthly EMI for "${emi.loanName}" exceeds total remaining amount.`);
-        return;
-      }
+      if (!emi.loanName.trim()) { setEmiError('Please enter a name for each EMI.'); return; }
+      if (!emi.monthlyAmount || parseFloat(emi.monthlyAmount) <= 0) { setEmiError('Please enter a valid monthly amount.'); return; }
+      const m = parseFloat(emi.monthlyAmount), t = parseFloat(emi.totalRemaining);
+      if (t > 0 && m > t) { setEmiError(`Monthly EMI for "${emi.loanName}" exceeds total remaining.`); return; }
     }
-    if (totalMonthlyEMI >= salaryNum) {
-      setEmiError('Your total EMIs equal or exceed your salary. Please review.');
-      return;
-    }
+    if (totalMonthlyEMI >= salaryNum) { setEmiError('Your total EMIs equal or exceed your salary.'); return; }
     setEmiError('');
     goTo(2);
   };
 
   // ── Category helpers ─────────────────────────────────
   const toggleRow = (id: string) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, enabled: !r.enabled } : r)));
+    setRows((p) => p.map((r) => r.id === id ? { ...r, enabled: !r.enabled } : r));
 
   const updateAmount = (id: string, raw: string) => {
     const amount = parseFloat(raw) || 0;
     const base = budgetableSalary || 1;
-    setRows((prev) =>
-      prev.map((r) =>
-        r.id === id ? { ...r, amount, percentage: Math.round((amount / base) * 100) } : r
-      )
-    );
+    setRows((p) => p.map((r) => r.id === id ? { ...r, amount, percentage: Math.round((amount / base) * 100) } : r));
   };
 
   const updateName = (id: string, name: string) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, name } : r)));
+    setRows((p) => p.map((r) => r.id === id ? { ...r, name } : r));
 
   const setEditing = (id: string, val: boolean) =>
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, isEditing: val } : r)));
+    setRows((p) => p.map((r) => r.id === id ? { ...r, isEditing: val } : r));
 
-  const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
+  const removeRow = (id: string) =>
+    setRows((p) => p.filter((r) => r.id !== id));
+
+  // Called when user picks "Build my own" — wipes the rows completely
+  const clearRows = () => setRows([]);
 
   const addCustomRow = () => {
     const name = newCatName.trim();
     const amount = parseFloat(newCatAmount) || 0;
     if (!name) return;
     const base = budgetableSalary || 1;
-    setRows((prev) => [
-      ...prev,
+    setRows((p) => [
+      ...p,
       {
         id: `custom-${Date.now()}`,
         name,
@@ -216,7 +185,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
 
       const totalAllocated = rows.filter((r) => r.enabled).reduce((s, r) => s + r.amount, 0);
       if (totalAllocated > budgetableSalary) {
-        setError('Total category amounts exceed your available budget after EMIs.');
+        setError('Total category amounts exceed your available budget.');
         setIsSaving(false);
         return;
       }
@@ -269,15 +238,13 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
     }
   };
 
-  // ── Animation ────────────────────────────────────────
   const variants = {
-    enter: (d: number) => ({ x: d > 0 ? 60 : -60, opacity: 0 }),
+    enter: (d: number) => ({ x: d > 0 ? 50 : -50, opacity: 0 }),
     center: { x: 0, opacity: 1 },
-    exit: (d: number) => ({ x: d > 0 ? -60 : 60, opacity: 0 }),
+    exit: (d: number) => ({ x: d > 0 ? -50 : 50, opacity: 0 }),
   };
 
   const enabledCount = rows.filter((r) => r.enabled).length;
-  const stepTitle = ['Set Up Your Budget', 'Your EMIs', 'Customize Categories', "You're All Set!"];
 
   return (
     <AnimatePresence>
@@ -287,58 +254,62 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-            onClick={onClose}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            onClick={step < 3 ? onClose : undefined}
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 24 }}
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 24 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden"
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
             >
               {/* Header */}
               <div className="px-6 pt-6 pb-4 border-b border-gray-100">
                 <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center">
-                      <Wallet className="text-white" size={20} />
-                    </div>
-                    <div>
-                      <h2 className="text-lg font-bold text-gray-900">{stepTitle[step]}</h2>
-                      <p className="text-xs text-gray-400">Step {step + 1} of 4</p>
-                    </div>
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900">{STEP_TITLES[step]}</h2>
+                    <p className="text-xs text-gray-400 mt-0.5">Step {step + 1} of {STEPS.length}</p>
                   </div>
                   {step < 3 && (
                     <button
                       onClick={onClose}
-                      className="text-gray-400 hover:text-gray-600 transition-colors text-sm flex items-center gap-1"
+                      className="p-1.5 rounded-lg text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors"
+                      aria-label="Close"
                     >
-                      Skip <X size={14} />
+                      <X size={16} />
                     </button>
                   )}
                 </div>
 
-                {/* Progress bars */}
-                <div className="flex gap-2">
-                  {STEP_LABELS.map((label, i) => (
-                    <div key={label} className="flex-1">
-                      <div className={`h-1.5 rounded-full transition-colors duration-300 ${
-                        i <= step ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gray-100'
-                      }`} />
-                      <p className={`text-xs mt-1 text-center font-medium ${i <= step ? 'text-orange-500' : 'text-gray-300'}`}>
-                        {label}
-                      </p>
-                    </div>
+                {/* Progress bar */}
+                <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full bg-orange-400"
+                    animate={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  />
+                </div>
+                <div className="flex justify-between mt-1.5">
+                  {STEPS.map((label, i) => (
+                    <span
+                      key={label}
+                      className={`text-[11px] font-medium transition-colors ${
+                        i <= step ? 'text-orange-500' : 'text-gray-300'
+                      }`}
+                    >
+                      {label}
+                    </span>
                   ))}
                 </div>
               </div>
 
               {/* Step content */}
-              <div className="relative overflow-hidden" style={{ minHeight: 320 }}>
+              <div className="relative overflow-hidden" style={{ minHeight: 280 }}>
                 <AnimatePresence custom={direction} mode="wait">
                   {step === 0 && (
-                    <motion.div key="step-0" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
+                    <motion.div key="step-0" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: 'easeInOut' }}>
                       <OnboardingModalSalaryInput0
                         salary={salary}
                         onSalaryChange={setSalary}
@@ -348,9 +319,8 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                       />
                     </motion.div>
                   )}
-
                   {step === 1 && (
-                    <motion.div key="step-1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
+                    <motion.div key="step-1" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: 'easeInOut' }}>
                       <OnboardingModalEMISetup1
                         emis={emis}
                         noEMI={noEMI}
@@ -364,10 +334,9 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                       />
                     </motion.div>
                   )}
-
                   {step === 2 && (
-                    <motion.div key="step-2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
-                      <OnboardingModalCategorySetup2
+                    <motion.div key="step-2" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: 'easeInOut' }}>
+                      <OnboardingModalCategorySetup1
                         salary={budgetableSalary}
                         reservedForEMI={totalMonthlyEMI}
                         rows={rows}
@@ -381,6 +350,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                         onUpdateName={updateName}
                         onSetEditing={setEditing}
                         onRemoveRow={removeRow}
+                        onClearRows={clearRows}
                         onNewCatNameChange={setNewCatName}
                         onNewCatAmountChange={setNewCatAmount}
                         onAddCustomRow={addCustomRow}
@@ -390,10 +360,9 @@ export default function OnboardingModal({ isOpen, onClose, onComplete }: Onboard
                       />
                     </motion.div>
                   )}
-
                   {step === 3 && (
-                    <motion.div key="step-3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.22, ease: 'easeInOut' }}>
-                      <OnboardingModalDone3
+                    <motion.div key="step-3" custom={direction} variants={variants} initial="enter" animate="center" exit="exit" transition={{ duration: 0.2, ease: 'easeInOut' }}>
+                      <OnboardingModalSuccess2
                         salary={salary}
                         enabledCount={enabledCount}
                         onComplete={onComplete}
