@@ -2,16 +2,14 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, Pencil, Trash2, CheckCircle2, Circle, ChevronDown, ChevronUp, Calendar, TrendingDown } from 'lucide-react';
 import {
-  EMI,
-  EMIPaymentLog,
-  formatNRs,
-  getProgressPct,
-  getPaidInstallments,
-  getTotalInstallments,
-  getDaysUntilDue,
-  isPaidThisMonth,
+  CreditCard, Pencil, Trash2, CheckCircle2, Circle,
+  ChevronDown, ChevronUp, Calendar, TrendingDown,
+} from 'lucide-react';
+import {
+  EMI, EMIPaymentLog, formatNRs,
+  getProgressPct, getPaidInstallments, getTotalInstallments,
+  getDaysUntilDue, isPaidThisMonth,
 } from './utils';
 
 interface EMITableProps {
@@ -19,12 +17,14 @@ interface EMITableProps {
   logs: EMIPaymentLog[];
   onEdit: (emi: EMI) => void;
   onDelete: (id: number) => void;
-  onTogglePaid: (emi: EMI) => void;
+  // BUG FIX: alreadyPaid is passed alongside emi so the parent never has to
+  // re-derive it from a potentially stale logs closure.
+  onTogglePaid: (emi: EMI, alreadyPaid: boolean) => void;
   onAdd: () => void;
 }
 
 function DueBadge({ emi, logs }: { emi: EMI; logs: EMIPaymentLog[] }) {
-  const paidNow = isPaidThisMonth(emi, logs);
+  const paidNow      = isPaidThisMonth(emi, logs);
   const daysUntilDue = getDaysUntilDue(emi.payment_day);
 
   if (paidNow)
@@ -40,24 +40,20 @@ function DueBadge({ emi, logs }: { emi: EMI; logs: EMIPaymentLog[] }) {
 }
 
 function ExpandedRow({ emi, logs }: { emi: EMI; logs: EMIPaymentLog[] }) {
-  const paidCount = getPaidInstallments(emi, logs);
-  const totalCount = getTotalInstallments(emi);
-  const amountPaid = paidCount * emi.emi_amount;
+  const paidCount       = getPaidInstallments(emi, logs);
+  const totalCount      = getTotalInstallments(emi);
+  const amountPaid      = paidCount * emi.emi_amount;
   const amountRemaining = Math.max(0, emi.total_amount - amountPaid);
-  const progressPct = getProgressPct(emi, logs);
+  const progressPct     = getProgressPct(emi, logs);
 
   return (
     <motion.tr
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       transition={{ duration: 0.15 }}
     >
-      {/* spans all 6 columns */}
       <td colSpan={6} className="px-0 pb-0">
         <div className="mx-4 mb-4 bg-gray-50 rounded-2xl p-5 border border-gray-100">
 
-          {/* Progress bar */}
           <div className="mb-4">
             <div className="flex justify-between text-xs text-gray-500 mb-1.5">
               <span>Payoff Progress</span>
@@ -67,8 +63,8 @@ function ExpandedRow({ emi, logs }: { emi: EMI; logs: EMIPaymentLog[] }) {
               <motion.div
                 className={`h-full rounded-full ${
                   progressPct >= 100 ? 'bg-emerald-500' :
-                  progressPct >= 60  ? 'bg-blue-500' :
-                  progressPct >= 30  ? 'bg-amber-500' : 'bg-orange-400'
+                  progressPct >= 60  ? 'bg-blue-500'    :
+                  progressPct >= 30  ? 'bg-amber-500'   : 'bg-orange-400'
                 }`}
                 initial={{ width: 0 }}
                 animate={{ width: `${progressPct}%` }}
@@ -81,7 +77,6 @@ function ExpandedRow({ emi, logs }: { emi: EMI; logs: EMIPaymentLog[] }) {
             </div>
           </div>
 
-          {/* Stats row */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white rounded-xl p-3 border border-gray-100">
               <p className="text-xs text-gray-400 mb-1">Total Loan</p>
@@ -139,8 +134,8 @@ export default function EMITable({ emis, logs, onEdit, onDelete, onTogglePaid, o
   }
 
   // Sort: unpaid + soonest due first, paid last
+  const monthStr = new Date().toISOString().slice(0, 7);
   const sorted = [...emis].sort((a, b) => {
-    const monthStr = new Date().toISOString().slice(0, 7);
     const aPaid = logs.some((l) => l.emi_id === a.emi_id && l.paid_month.startsWith(monthStr));
     const bPaid = logs.some((l) => l.emi_id === b.emi_id && l.paid_month.startsWith(monthStr));
     if (aPaid !== bPaid) return aPaid ? 1 : -1;
@@ -150,10 +145,9 @@ export default function EMITable({ emis, logs, onEdit, onDelete, onTogglePaid, o
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <table className="w-full">
-        {/* Header */}
         <thead>
           <tr className="border-b border-gray-100">
-            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5 w-10"></th>
+            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5 w-10" />
             <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3.5">Loan</th>
             <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3.5 hidden sm:table-cell">Monthly EMI</th>
             <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3.5 hidden md:table-cell">Paid</th>
@@ -164,23 +158,24 @@ export default function EMITable({ emis, logs, onEdit, onDelete, onTogglePaid, o
 
         <tbody>
           {sorted.map((emi) => {
-            const paidNow = isPaidThisMonth(emi, logs);
-            const paidCount = getPaidInstallments(emi, logs);
-            const totalCount = getTotalInstallments(emi);
+            // paidNow is computed HERE from the fresh `logs` prop —
+            // passed straight to onTogglePaid so the parent never re-derives it.
+            const paidNow     = isPaidThisMonth(emi, logs);
+            const paidCount   = getPaidInstallments(emi, logs);
+            const totalCount  = getTotalInstallments(emi);
             const progressPct = getProgressPct(emi, logs);
-            const isExpanded = expandedId === emi.emi_id;
+            const isExpanded  = expandedId === emi.emi_id;
 
             return (
               <React.Fragment key={emi.emi_id}>
-                {/* Main row */}
                 <tr
                   className={`border-b border-gray-50 hover:bg-gray-50/60 transition-colors cursor-pointer ${isExpanded ? 'bg-gray-50/60' : ''}`}
                   onClick={() => setExpandedId(isExpanded ? null : emi.emi_id)}
                 >
-                  {/* Paid toggle */}
+                  {/* Paid toggle — stopPropagation so row expand doesn't fire */}
                   <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
                     <button
-                      onClick={() => onTogglePaid(emi)}
+                      onClick={() => onTogglePaid(emi, paidNow)}
                       className="flex-shrink-0 transition-transform hover:scale-110"
                       title={paidNow ? 'Mark as unpaid' : 'Mark as paid this month'}
                     >
@@ -191,35 +186,30 @@ export default function EMITable({ emis, logs, onEdit, onDelete, onTogglePaid, o
                     </button>
                   </td>
 
-                  {/* Loan name */}
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-2">
                       <span className={`font-semibold text-sm ${paidNow ? 'text-gray-400' : 'text-gray-800'}`}>
                         {emi.loan_name}
                       </span>
-                      {/* Progress pill — mobile only */}
                       <span className="text-xs text-gray-400 sm:hidden">{progressPct}%</span>
                     </div>
-                    {/* Mini progress bar */}
                     <div className="mt-1.5 w-32 h-1 bg-gray-100 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full ${
                           progressPct >= 100 ? 'bg-emerald-500' :
-                          progressPct >= 60  ? 'bg-blue-500' :
-                          progressPct >= 30  ? 'bg-amber-500' : 'bg-orange-400'
+                          progressPct >= 60  ? 'bg-blue-500'    :
+                          progressPct >= 30  ? 'bg-amber-500'   : 'bg-orange-400'
                         }`}
                         style={{ width: `${progressPct}%` }}
                       />
                     </div>
                   </td>
 
-                  {/* Monthly EMI */}
                   <td className="px-4 py-4 text-right hidden sm:table-cell">
                     <span className="text-sm font-bold text-gray-800 tabular-nums">{formatNRs(emi.emi_amount)}</span>
                     <p className="text-xs text-gray-400">/month</p>
                   </td>
 
-                  {/* Installments paid */}
                   <td className="px-4 py-4 text-right hidden md:table-cell">
                     <span className="text-sm font-semibold text-gray-700 tabular-nums">
                       {paidCount}
@@ -228,12 +218,10 @@ export default function EMITable({ emis, logs, onEdit, onDelete, onTogglePaid, o
                     <p className="text-xs text-gray-400">installments</p>
                   </td>
 
-                  {/* Due badge */}
                   <td className="px-4 py-4 hidden lg:table-cell">
                     <DueBadge emi={emi} logs={logs} />
                   </td>
 
-                  {/* Actions */}
                   <td className="px-5 py-4">
                     <div className="flex items-center justify-end gap-1">
                       <button
@@ -258,7 +246,6 @@ export default function EMITable({ emis, logs, onEdit, onDelete, onTogglePaid, o
                   </td>
                 </tr>
 
-                {/* Expanded detail row */}
                 <AnimatePresence>
                   {isExpanded && (
                     <ExpandedRow key={`expand-${emi.emi_id}`} emi={emi} logs={logs} />
