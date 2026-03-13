@@ -2,17 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, CreditCard, Info, AlertTriangle } from 'lucide-react';
+import { X, CreditCard, Info } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { EMI } from './utils';
 
 interface EMIFormModalProps {
-  isOpen:           boolean;
-  onClose:          () => void;
-  onSave:           (data: Omit<EMI, 'emi_id' | 'is_active'>) => Promise<void>;
+  isOpen:    boolean;
+  onClose:   () => void;
+  // Called when balance is fine — parent saves directly
+  onSaveDirect: (data: Omit<EMI, 'emi_id' | 'is_active'>) => Promise<void>;
+  // Called when EMI exceeds available balance — parent closes this modal first,
+  // then shows its own confirm dialog
+  onSaveNeedsConfirm: (data: Omit<EMI, 'emi_id' | 'is_active'>, message: string) => void;
   existing?:        EMI | null;
-  availableBalance: number; // passed from EMIMainContent — already calculated
+  availableBalance: number;
 }
 
 const inputClass =
@@ -31,84 +35,20 @@ const DEFAULT: Omit<EMI, 'emi_id' | 'is_active'> = {
   remaining_installments: null,
 };
 
-// ── Small inline confirmation dialog ──────────────────────────────────────────
-
-interface ConfirmDialogProps {
-  isOpen:        boolean;
-  message:       string;
-  confirmLabel?: string;
-  onConfirm:     () => void;
-  onCancel:      () => void;
-}
-
-function ConfirmDialog({ isOpen, message, confirmLabel = 'Add Anyway', onConfirm, onCancel }: ConfirmDialogProps) {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[70]"
-            onClick={onCancel}
-          />
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 8 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 8 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="w-11 h-11 rounded-full bg-amber-100 flex items-center justify-center mb-4">
-                <AlertTriangle size={20} className="text-amber-500" />
-              </div>
-              <h3 className="text-base font-bold text-gray-900 mb-2">Low balance warning</h3>
-              <p className="text-sm text-gray-500 leading-relaxed mb-6">{message}</p>
-              <div className="flex gap-3">
-                <button
-                  onClick={onCancel}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={onConfirm}
-                  className="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold transition-colors"
-                >
-                  {confirmLabel}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ── Main modal ─────────────────────────────────────────────────────────────────
-
 export default function EMIFormModal({
-  isOpen, onClose, onSave, existing, availableBalance,
+  isOpen, onClose, onSaveDirect, onSaveNeedsConfirm, existing, availableBalance,
 }: EMIFormModalProps) {
   const { user } = useAuth();
 
-  const [form, setForm]         = useState(DEFAULT);
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError]       = useState('');
+  const [form, setForm]               = useState(DEFAULT);
+  const [isSaving, setIsSaving]       = useState(false);
+  const [error, setError]             = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // For the live "exceeds salary" warning (kept from original)
-  const [monthlySalary, setMonthlySalary]           = useState(0);
+  // For the live "exceeds salary" amber warning
+  const [monthlySalary, setMonthlySalary]             = useState(0);
   const [otherActiveEMITotal, setOtherActiveEMITotal] = useState(0);
 
-  // Confirmation dialog — shown when EMI exceeds available balance
-  const [showConfirm, setShowConfirm] = useState(false);
-  // We store the validated form data here so we can submit after confirmation
-  const [pendingFormData, setPendingFormData] = useState<Omit<EMI, 'emi_id' | 'is_active'> | null>(null);
-
-  // Reset form when modal opens
   useEffect(() => {
     if (!isOpen) return;
 
@@ -124,8 +64,6 @@ export default function EMIFormModal({
 
     setError('');
     setFieldErrors({});
-    setShowConfirm(false);
-    setPendingFormData(null);
 
     if (!user?.id) return;
 
@@ -134,9 +72,7 @@ export default function EMIFormModal({
         supabase.from('users').select('monthly_salary').eq('user_id', user.id).maybeSingle(),
         supabase.from('emi_payments').select('emi_id, emi_amount').eq('user_id', user.id).eq('is_active', true),
       ]);
-
       setMonthlySalary(Number(userRes.data?.monthly_salary ?? 0));
-
       const otherEMIs = (emiRes.data || [])
         .filter((e) => !existing || e.emi_id !== existing.emi_id)
         .reduce((s, e) => s + Number(e.emi_amount), 0);
@@ -173,18 +109,16 @@ export default function EMIFormModal({
       ? Math.ceil(form.total_amount / form.emi_amount)
       : null;
 
-  // Live warning — shows when projected total EMI would exceed salary
+  // Live amber warning — total EMIs would exceed salary
   const projectedTotalEMI = otherActiveEMITotal + (form.emi_amount || 0);
   const emiExceedsSalary  = monthlySalary > 0 && projectedTotalEMI > monthlySalary;
   const emiWarningMsg     = emiExceedsSalary
     ? `Your total monthly EMIs would be NRs ${projectedTotalEMI.toLocaleString('en-IN')}, which exceeds your salary of NRs ${monthlySalary.toLocaleString('en-IN')}.`
     : null;
 
-  // ── Validate then either save or show confirmation dialog ─────────────────
-
   const handleSave = async () => {
-    // Basic validation
-    if (!form.loan_name.trim()) { setError('Loan name is required.'); return; }
+    // Validation
+    if (!form.loan_name.trim())                  { setError('Loan name is required.'); return; }
     if (!form.total_amount || form.total_amount <= 0) { setError('Please enter a valid total loan amount.'); return; }
     if (!form.emi_amount   || form.emi_amount   <= 0) { setError('Please enter a valid monthly EMI.'); return; }
     if (form.emi_amount > form.total_amount) {
@@ -196,23 +130,21 @@ export default function EMIFormModal({
       return;
     }
 
-    // If this EMI would exceed available balance → show confirmation dialog
-    // (availableBalance is passed from EMIMainContent which already computed it)
+    // If EMI exceeds available balance → hand off to parent which closes this
+    // modal first, then shows its own confirm dialog.
     if (form.emi_amount > availableBalance) {
-      setPendingFormData(form);
-      setShowConfirm(true);
-      return;
+      onSaveNeedsConfirm(
+        form,
+        `Your available balance is NRs ${availableBalance.toLocaleString('en-IN')}, but this EMI is NRs ${form.emi_amount.toLocaleString('en-IN')}. Adding this loan may leave you short. Do you want to add it anyway?`,
+      );
+      return; // parent will close modal via setModalOpen(false)
     }
 
-    // All good — save directly
-    await doSave(form);
-  };
-
-  const doSave = async (data: Omit<EMI, 'emi_id' | 'is_active'>) => {
+    // Balance is fine — save directly
     setIsSaving(true);
     setError('');
     try {
-      await onSave(data);
+      await onSaveDirect(form);
       onClose();
     } catch {
       setError('Something went wrong. Please try again.');
@@ -221,231 +153,185 @@ export default function EMIFormModal({
     }
   };
 
-  // User confirmed despite low balance
-  const handleConfirmSave = async () => {
-    setShowConfirm(false);
-    if (pendingFormData) await doSave(pendingFormData);
-  };
-
   return (
-    <>
-      <AnimatePresence>
-        {isOpen && (
-          <>
+    <AnimatePresence>
+      {isOpen && (
+        <>
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
+            onClick={onClose}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50"
-              onClick={onClose}
-            />
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 16 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 16 }}
-                transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
-                      <CreditCard size={16} className="text-blue-500" />
-                    </div>
-                    <div>
-                      <h2 className="text-base font-bold text-gray-900">
-                        {existing ? 'Edit Loan' : 'Add New Loan'}
-                      </h2>
-                      <p className="text-xs text-gray-400">
-                        Fields marked <span className="text-red-400">*</span> are required
-                      </p>
-                    </div>
+              initial={{ opacity: 0, scale: 0.96, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 16 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <CreditCard size={16} className="text-blue-500" />
                   </div>
-                  <button
-                    onClick={onClose}
-                    className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="px-6 py-5 space-y-4">
-                  {/* Global error */}
-                  {error && (
-                    <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-sm">
-                      {error}
-                    </div>
-                  )}
-
-                  {/* Available balance info */}
-                  <div className="flex items-center gap-2 px-3.5 py-2.5 bg-gray-50 border border-gray-100 rounded-xl">
-                    <Info size={13} className="text-gray-400 flex-shrink-0" />
-                    <p className="text-xs text-gray-500">
-                      Available balance:{' '}
-                      <span className="font-semibold text-gray-700">
-                        NRs {availableBalance.toLocaleString('en-IN')}
-                      </span>
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900">
+                      {existing ? 'Edit Loan' : 'Add New Loan'}
+                    </h2>
+                    <p className="text-xs text-gray-400">
+                      Fields marked <span className="text-red-400">*</span> are required
                     </p>
                   </div>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
 
-                  {/* Loan name */}
+              <div className="px-6 py-5 space-y-4">
+                {error && (
+                  <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-sm">
+                    {error}
+                  </div>
+                )}
+
+                {/* Available balance info */}
+                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-gray-50 border border-gray-100 rounded-xl">
+                  <Info size={13} className="text-gray-400 flex-shrink-0" />
+                  <p className="text-xs text-gray-500">
+                    Available balance:{' '}
+                    <span className="font-semibold text-gray-700">
+                      NRs {availableBalance.toLocaleString('en-IN')}
+                    </span>
+                  </p>
+                </div>
+
+                {/* Loan name */}
+                <div>
+                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                    Loan Name <span className="text-red-400">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Car Loan, Home Loan"
+                    value={form.loan_name}
+                    onChange={(e) => set('loan_name', e.target.value)}
+                    className={inputClass}
+                    autoFocus
+                  />
+                </div>
+
+                {/* Total + EMI */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                      Loan Name <span className="text-red-400">*</span>
+                      Total Loan Amount <span className="text-red-400">*</span>
                     </label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Car Loan, Home Loan"
-                      value={form.loan_name}
-                      onChange={(e) => set('loan_name', e.target.value)}
-                      className={inputClass}
-                      autoFocus
-                    />
-                  </div>
-
-                  {/* Total amount + Monthly EMI */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                        Total Loan Amount <span className="text-red-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={form.total_amount || ''}
-                          onChange={(e) => set('total_amount', parseFloat(e.target.value) || 0)}
-                          onBlur={validateEMIvsTotal}
-                          className={`${inputClass} pl-10`}
-                          min="0"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                        Monthly EMI <span className="text-red-400">*</span>
-                      </label>
-                      <div className="relative">
-                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={form.emi_amount || ''}
-                          onChange={(e) => set('emi_amount', parseFloat(e.target.value) || 0)}
-                          onBlur={validateEMIvsTotal}
-                          className={`${fieldErrors.emi_amount ? inputErrorClass : inputClass} pl-10`}
-                          min="0"
-                        />
-                      </div>
-                      {fieldErrors.emi_amount && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
-                          className="text-xs text-red-500 mt-1 font-medium"
-                        >
-                          {fieldErrors.emi_amount}
-                        </motion.p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Estimated installments */}
-                  {estimatedInstallments && !fieldErrors.emi_amount && (
-                    <p className="text-xs text-blue-600 bg-blue-50 px-3.5 py-2 rounded-xl">
-                      Estimated{' '}
-                      <span className="font-semibold">{estimatedInstallments} installments</span>{' '}
-                      to pay off this loan
-                    </p>
-                  )}
-
-                  {/* Live salary warning */}
-                  {emiWarningMsg && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                      className="flex items-start gap-2 px-3.5 py-2.5 bg-amber-50 border border-amber-200 rounded-xl"
-                    >
-                      <Info size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-amber-700 font-medium leading-relaxed">
-                        {emiWarningMsg}
-                      </p>
-                    </motion.div>
-                  )}
-
-                  {/* Start date + Due day */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                        Start Date
-                      </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
                       <input
-                        type="date"
-                        value={form.start_date}
-                        onChange={(e) => set('start_date', e.target.value)}
-                        className={inputClass}
+                        type="number" placeholder="0"
+                        value={form.total_amount || ''}
+                        onChange={(e) => set('total_amount', parseFloat(e.target.value) || 0)}
+                        onBlur={validateEMIvsTotal}
+                        className={`${inputClass} pl-10`} min="0"
                       />
                     </div>
-                    <div>
-                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
-                        Due Day of Month
-                      </label>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                      Monthly EMI <span className="text-red-400">*</span>
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
                       <input
-                        type="number"
-                        placeholder="e.g. 5"
-                        value={form.payment_day || ''}
-                        onChange={(e) => set('payment_day', parseInt(e.target.value) || null)}
-                        onBlur={validatePaymentDay}
-                        min="1" max="31"
-                        className={fieldErrors.payment_day ? inputErrorClass : inputClass}
+                        type="number" placeholder="0"
+                        value={form.emi_amount || ''}
+                        onChange={(e) => set('emi_amount', parseFloat(e.target.value) || 0)}
+                        onBlur={validateEMIvsTotal}
+                        className={`${fieldErrors.emi_amount ? inputErrorClass : inputClass} pl-10`}
+                        min="0"
                       />
-                      {fieldErrors.payment_day && (
-                        <motion.p
-                          initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
-                          className="text-xs text-red-500 mt-1 font-medium"
-                        >
-                          {fieldErrors.payment_day}
-                        </motion.p>
-                      )}
                     </div>
+                    {fieldErrors.emi_amount && (
+                      <motion.p initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-xs text-red-500 mt-1 font-medium">
+                        {fieldErrors.emi_amount}
+                      </motion.p>
+                    )}
                   </div>
                 </div>
 
-                {/* Footer */}
-                <div className="px-6 pb-6 flex gap-3">
-                  <button
-                    onClick={onClose}
-                    className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                    onClick={handleSave}
-                    disabled={isSaving || !!fieldErrors.emi_amount || !!fieldErrors.payment_day}
-                    className="flex-1 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSaving ? (
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                        className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-                      />
-                    ) : existing ? 'Save Changes' : 'Add Loan'}
-                  </motion.button>
-                </div>
-              </motion.div>
-            </div>
-          </>
-        )}
-      </AnimatePresence>
+                {estimatedInstallments && !fieldErrors.emi_amount && (
+                  <p className="text-xs text-blue-600 bg-blue-50 px-3.5 py-2 rounded-xl">
+                    Estimated <span className="font-semibold">{estimatedInstallments} installments</span> to pay off this loan
+                  </p>
+                )}
 
-      {/* Confirmation dialog — rendered outside the main modal so z-index stacks correctly */}
-      <ConfirmDialog
-        isOpen={showConfirm}
-        message={`Your available balance is NRs ${availableBalance.toLocaleString('en-IN')}, but this EMI is NRs ${form.emi_amount.toLocaleString('en-IN')}. Adding this loan may leave you short. Do you want to add it anyway?`}
-        confirmLabel="Add Anyway"
-        onConfirm={handleConfirmSave}
-        onCancel={() => { setShowConfirm(false); setPendingFormData(null); }}
-      />
-    </>
+                {/* Live salary warning */}
+                {emiWarningMsg && (
+                  <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                    className="flex items-start gap-2 px-3.5 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                    <Info size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-700 font-medium leading-relaxed">{emiWarningMsg}</p>
+                  </motion.div>
+                )}
+
+                {/* Start date + Due day */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Start Date</label>
+                    <input type="date" value={form.start_date}
+                      onChange={(e) => set('start_date', e.target.value)}
+                      className={inputClass} />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Due Day of Month</label>
+                    <input type="number" placeholder="e.g. 5"
+                      value={form.payment_day || ''}
+                      onChange={(e) => set('payment_day', parseInt(e.target.value) || null)}
+                      onBlur={validatePaymentDay}
+                      min="1" max="31"
+                      className={fieldErrors.payment_day ? inputErrorClass : inputClass} />
+                    {fieldErrors.payment_day && (
+                      <motion.p initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
+                        className="text-xs text-red-500 mt-1 font-medium">
+                        {fieldErrors.payment_day}
+                      </motion.p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 pb-6 flex gap-3">
+                <button onClick={onClose}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                  Cancel
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                  onClick={handleSave}
+                  disabled={isSaving || !!fieldErrors.emi_amount || !!fieldErrors.payment_day}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-500 hover:bg-blue-600 text-white text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isSaving ? (
+                    <motion.div animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                  ) : existing ? 'Save Changes' : 'Add Loan'}
+                </motion.button>
+              </div>
+            </motion.div>
+          </div>
+        </>
+      )}
+    </AnimatePresence>
   );
 }
