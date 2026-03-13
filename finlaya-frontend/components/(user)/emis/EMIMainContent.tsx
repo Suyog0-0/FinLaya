@@ -5,20 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import { EMI, EMIPaymentLog, currentMonthKey, isPaidThisMonth } from './utils';
+import { EMI, EMIPaymentLog, currentMonthKey } from './utils';
 import EMISummaryBox from './EMISummaryBox';
 import EMITable from './EMITable';
 import EMIFormModal from './EMIFormModal';
 
-// ── Small confirmation dialog ──────────────────────────────────────────────────
+// ── Reusable confirmation dialog ───────────────────────────────────────────────
 
 interface ConfirmDialogProps {
-  isOpen: boolean;
-  title: string;
-  message: string;
+  isOpen:        boolean;
+  title:         string;
+  message:       string;
   confirmLabel?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+  onConfirm:     () => void;
+  onCancel:      () => void;
 }
 
 function ConfirmDialog({
@@ -42,14 +42,11 @@ function ConfirmDialog({
               className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Icon */}
               <div className="w-11 h-11 rounded-full bg-amber-100 flex items-center justify-center mb-4">
                 <AlertTriangle size={20} className="text-amber-500" />
               </div>
-
               <h3 className="text-base font-bold text-gray-900 mb-2">{title}</h3>
               <p className="text-sm text-gray-500 leading-relaxed mb-6">{message}</p>
-
               <div className="flex gap-3">
                 <button
                   onClick={onCancel}
@@ -77,25 +74,31 @@ function ConfirmDialog({
 export default function EMIMainContent() {
   const { user } = useAuth();
 
-  const [emis, setEmis]         = useState<EMI[]>([]);
-  const [logs, setLogs]         = useState<EMIPaymentLog[]>([]);
+  const [emis, setEmis]           = useState<EMI[]>([]);
+  const [logs, setLogs]           = useState<EMIPaymentLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [trigger, setTrigger]   = useState(0);
+  const [trigger, setTrigger]     = useState(0);
   const refetch = () => setTrigger((t) => t + 1);
 
   const [modalOpen, setModalOpen]   = useState(false);
   const [editingEMI, setEditingEMI] = useState<EMI | null>(null);
-
-  // Available balance — fetched once and refreshed on refetch
   const [availableBalance, setAvailableBalance] = useState(0);
 
-  // Confirmation dialog state
-  const [confirmState, setConfirmState] = useState<{
-    isOpen:    boolean;
-    emi:       EMI | null;
-    title:     string;
-    message:   string;
-  }>({ isOpen: false, emi: null, title: '', message: '' });
+  // Dialog for marking a loan paid when balance is low
+  const [toggleConfirm, setToggleConfirm] = useState<{
+    isOpen: boolean;
+    emi:    EMI | null;
+  }>({ isOpen: false, emi: null });
+
+  // Dialog for adding a loan when EMI exceeds balance.
+  // The form modal is closed BEFORE this dialog appears.
+  // We snapshot editingEMI here so doSave doesn't rely on a stale closure.
+  const [addConfirm, setAddConfirm] = useState<{
+    isOpen:         boolean;
+    pendingData:    Omit<EMI, 'emi_id' | 'is_active'> | null;
+    message:        string;
+    editingEMISnap: EMI | null; // snapshot of editingEMI at the time user submitted
+  }>({ isOpen: false, pendingData: null, message: '', editingEMISnap: null });
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -104,43 +107,17 @@ export default function EMIMainContent() {
     setIsLoading(true);
 
     const [emiResult, logResult, userRes, incomeRes, expenseRes, goalRes] = await Promise.all([
-      supabase
-        .from('emi_payments')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: true }),
-
-      supabase
-        .from('emi_payment_logs')
-        .select('*')
-        .eq('user_id', user.id),
-
-      supabase
-        .from('users')
-        .select('monthly_salary')
-        .eq('user_id', user.id)
-        .maybeSingle(),
-
-      supabase
-        .from('income')
-        .select('amount')
-        .eq('user_id', user.id),
-
-      supabase
-        .from('expenses')
-        .select('amount')
-        .eq('user_id', user.id),
-
-      supabase
-        .from('goals')
-        .select('saved_amount')
-        .eq('user_id', user.id),
+      supabase.from('emi_payments').select('*').eq('user_id', user.id).order('created_at', { ascending: true }),
+      supabase.from('emi_payment_logs').select('*').eq('user_id', user.id),
+      supabase.from('users').select('monthly_salary').eq('user_id', user.id).maybeSingle(),
+      supabase.from('income').select('amount').eq('user_id', user.id),
+      supabase.from('expenses').select('amount').eq('user_id', user.id),
+      supabase.from('goals').select('saved_amount').eq('user_id', user.id),
     ]);
 
     setEmis((emiResult.data || []) as EMI[]);
     setLogs((logResult.data || []) as EMIPaymentLog[]);
 
-    // Available balance = salary + other income - expenses - goal savings
     const salary      = Number(userRes.data?.monthly_salary ?? 0);
     const income      = (incomeRes.data  || []).reduce((s, r) => s + Number(r.amount), 0);
     const expenses    = (expenseRes.data || []).reduce((s, r) => s + Number(r.amount), 0);
@@ -148,31 +125,53 @@ export default function EMIMainContent() {
     setAvailableBalance(Math.max(0, salary + income - expenses - goalSavings));
 
     setIsLoading(false);
-  }, [user?.id, trigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, trigger]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  // ── Add / Edit ─────────────────────────────────────────────────────────────
+  // ── Save (add / edit) ──────────────────────────────────────────────────────
 
-  const handleSave = async (data: Omit<EMI, 'emi_id' | 'is_active'>) => {
+  // editingEMISnap is passed explicitly so this never reads from a stale closure.
+  // When called from the addConfirm dialog the form modal is already closed,
+  // so reading `editingEMI` state directly would be unreliable.
+  const doSave = async (
+    data: Omit<EMI, 'emi_id' | 'is_active'>,
+    editingEMISnap: EMI | null,
+  ) => {
     if (!user?.id) return;
-    if (editingEMI) {
+    if (editingEMISnap) {
       await supabase
         .from('emi_payments')
         .update({ ...data, updated_at: new Date().toISOString() })
-        .eq('emi_id', editingEMI.emi_id)
+        .eq('emi_id', editingEMISnap.emi_id)
         .eq('user_id', user.id);
     } else {
-      await supabase
-        .from('emi_payments')
-        .insert({ ...data, user_id: user.id, is_active: true });
+      await supabase.from('emi_payments').insert({ ...data, user_id: user.id, is_active: true });
     }
     setEditingEMI(null);
     refetch();
   };
 
-  const handleEdit  = (emi: EMI) => { setEditingEMI(emi); setModalOpen(true); };
-  const handleAdd   = ()          => { setEditingEMI(null); setModalOpen(true); };
+  // EMIFormModal calls this when balance is fine → pass editingEMI snapshot now
+  const handleSaveDirect = async (data: Omit<EMI, 'emi_id' | 'is_active'>) => {
+    await doSave(data, editingEMI);
+  };
+
+  // EMIFormModal calls this when balance is LOW →
+  // Snapshot editingEMI NOW (before modal closes and state can drift),
+  // close the form modal, then show the confirm dialog.
+  const handleSaveNeedsConfirm = (
+    data: Omit<EMI, 'emi_id' | 'is_active'>,
+    message: string,
+  ) => {
+    const snap = editingEMI; // capture before setModalOpen triggers any re-render
+    setModalOpen(false);
+    setAddConfirm({ isOpen: true, pendingData: data, message, editingEMISnap: snap });
+  };
+
+  const handleEdit = (emi: EMI) => { setEditingEMI(emi); setModalOpen(true); };
+  const handleAdd  = ()          => { setEditingEMI(null); setModalOpen(true); };
 
   // ── Delete ─────────────────────────────────────────────────────────────────
 
@@ -184,24 +183,25 @@ export default function EMIMainContent() {
     refetch();
   };
 
-  // ── Actually write the toggle to Supabase ──────────────────────────────────
+  // ── Toggle paid ────────────────────────────────────────────────────────────
+  // BUG FIX: `alreadyPaid` is passed in from EMITable where it is computed
+  // from the fresh `logs` prop at click time — never from a stale closure.
+  // Previously, re-deriving it inside this function from the `logs` state
+  // caused the wrong loan to be unticked after a sort re-render.
 
-  const doTogglePaid = async (emi: EMI) => {
+  const doTogglePaid = async (emi: EMI, alreadyPaid: boolean) => {
     if (!user?.id) return;
-    const monthKey     = currentMonthKey();
-    const alreadyPaid  = isPaidThisMonth(emi, logs);
+    const monthKey = currentMonthKey();
 
     if (alreadyPaid) {
-      // Unmark — always allowed, no balance check needed
       await supabase
         .from('emi_payment_logs')
         .delete()
-        .eq('emi_id', emi.emi_id)
+        .eq('emi_id', emi.emi_id)   // exact loan — no ambiguity
         .eq('user_id', user.id)
         .gte('paid_month', `${monthKey.slice(0, 7)}-01`)
         .lte('paid_month', `${monthKey.slice(0, 7)}-31`);
     } else {
-      // Mark as paid
       await supabase.from('emi_payment_logs').insert({
         emi_id:     emi.emi_id,
         user_id:    user.id,
@@ -212,40 +212,17 @@ export default function EMIMainContent() {
     refetch();
   };
 
-  // ── Toggle paid — check balance first, show dialog if low ─────────────────
-
-  const handleTogglePaid = (emi: EMI) => {
-    const alreadyPaid = isPaidThisMonth(emi, logs);
-
-    // Unmarking is always fine — no dialog needed
+  // EMITable passes (emi, alreadyPaid) — alreadyPaid computed there at click time
+  const handleTogglePaid = (emi: EMI, alreadyPaid: boolean) => {
     if (alreadyPaid) {
-      doTogglePaid(emi);
+      doTogglePaid(emi, true);
       return;
     }
-
-    // Marking as paid — check if available balance covers this EMI
     if (emi.emi_amount > availableBalance) {
-      // Show confirmation dialog with low-savings warning
-      setConfirmState({
-        isOpen:  true,
-        emi,
-        title:   'Low balance warning',
-        message: `Your available balance is NRs ${availableBalance.toLocaleString('en-IN')}, which is less than this EMI of NRs ${emi.emi_amount.toLocaleString('en-IN')}. Do you still want to mark it as paid?`,
-      });
+      setToggleConfirm({ isOpen: true, emi });
       return;
     }
-
-    // Balance is fine — proceed directly
-    doTogglePaid(emi);
-  };
-
-  // Confirm dialog callbacks
-  const handleConfirm = () => {
-    if (confirmState.emi) doTogglePaid(confirmState.emi);
-    setConfirmState({ isOpen: false, emi: null, title: '', message: '' });
-  };
-  const handleCancelConfirm = () => {
-    setConfirmState({ isOpen: false, emi: null, title: '', message: '' });
+    doTogglePaid(emi, false);
   };
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
@@ -269,20 +246,16 @@ export default function EMIMainContent() {
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-6 py-8">
 
-        {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">EMI & Loans</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Track your active loans and monthly payments
-            </p>
+            <p className="text-gray-500 text-sm mt-1">Track your active loans and monthly payments</p>
           </div>
           <button
             onClick={handleAdd}
             className="flex items-center gap-2 px-5 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-xl font-semibold text-sm shadow-md transition-all"
           >
-            <Plus size={16} />
-            Add Loan
+            <Plus size={16} /> Add Loan
           </button>
         </div>
 
@@ -298,23 +271,46 @@ export default function EMIMainContent() {
         />
       </div>
 
-      {/* Add/Edit modal */}
+      {/* Add / Edit form modal */}
       <EMIFormModal
         isOpen={modalOpen}
         onClose={() => { setModalOpen(false); setEditingEMI(null); }}
-        onSave={handleSave}
+        onSaveDirect={handleSaveDirect}
+        onSaveNeedsConfirm={handleSaveNeedsConfirm}
         existing={editingEMI}
         availableBalance={availableBalance}
       />
 
-      {/* Low-balance confirmation dialog */}
+      {/* Confirm: mark paid despite low balance */}
       <ConfirmDialog
-        isOpen={confirmState.isOpen}
-        title={confirmState.title}
-        message={confirmState.message}
+        isOpen={toggleConfirm.isOpen}
+        title="Low balance warning"
+        message={
+          toggleConfirm.emi
+            ? `Your available balance is NRs ${availableBalance.toLocaleString('en-IN')}, which is less than this EMI of NRs ${toggleConfirm.emi.emi_amount.toLocaleString('en-IN')}. Do you still want to mark it as paid?`
+            : ''
+        }
         confirmLabel="Mark as Paid"
-        onConfirm={handleConfirm}
-        onCancel={handleCancelConfirm}
+        onConfirm={() => {
+          if (toggleConfirm.emi) doTogglePaid(toggleConfirm.emi, false);
+          setToggleConfirm({ isOpen: false, emi: null });
+        }}
+        onCancel={() => setToggleConfirm({ isOpen: false, emi: null })}
+      />
+
+      {/* Confirm: add loan despite low balance — shown AFTER form modal closes */}
+      <ConfirmDialog
+        isOpen={addConfirm.isOpen}
+        title="Low balance warning"
+        message={addConfirm.message}
+        confirmLabel="Add Anyway"
+        onConfirm={async () => {
+          if (addConfirm.pendingData) {
+            await doSave(addConfirm.pendingData, addConfirm.editingEMISnap);
+          }
+          setAddConfirm({ isOpen: false, pendingData: null, message: '', editingEMISnap: null });
+        }}
+        onCancel={() => setAddConfirm({ isOpen: false, pendingData: null, message: '', editingEMISnap: null })}
       />
     </div>
   );
