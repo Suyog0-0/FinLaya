@@ -14,8 +14,8 @@ export interface CategoryRow {
 }
 
 interface CategorySetupProps {
-  salary: number;          // budgetable salary (after EMI deduction)
-  reservedForEMI: number;  // total monthly EMI amount
+  salary: number;
+  reservedForEMI: number;
   rows: CategoryRow[];
   error: string;
   newCatName: string;
@@ -31,30 +31,31 @@ interface CategorySetupProps {
   onNewCatAmountChange: (val: string) => void;
   onAddCustomRow: () => void;
   onToggleAddRow: () => void;
-  onClearRows: () => void;   // clears all rows for "build my own"
+  onClearRows: () => void;
+  // BUG FIX: called when user picks "Use recommended split" after previously
+  // wiping rows with "Build my own". Parent re-runs buildRows and fills rows.
+  onResetRows: () => void;
   onBack: () => void;
   onSave: () => void;
 }
 
-// ── 3-segment bar: EMI | allocated | remaining ──────────────────────────────
+// ── 3-segment bar ──────────────────────────────────────────────────────────────
+
 function AllocationBar({
-  totalSalary,
-  reservedForEMI,
-  rows,
+  totalSalary, reservedForEMI, rows,
 }: {
   totalSalary: number;
   reservedForEMI: number;
   rows: CategoryRow[];
 }) {
-  const allocated = rows.filter((r) => r.enabled).reduce((s, r) => s + r.amount, 0);
+  const allocated  = rows.filter((r) => r.enabled).reduce((s, r) => s + r.amount, 0);
   const budgetable = totalSalary - reservedForEMI;
-  const over = allocated > budgetable;
+  const over       = allocated > budgetable;
 
   const emiPct   = totalSalary > 0 ? (reservedForEMI / totalSalary) * 100 : 0;
   const allocPct = totalSalary > 0
     ? Math.min((allocated / totalSalary) * 100, 100 - emiPct)
     : 0;
-
   const remaining = Math.max(0, budgetable - allocated);
 
   return (
@@ -62,9 +63,7 @@ function AllocationBar({
       <div className="flex justify-between text-xs mb-2">
         <span className="text-gray-400">
           Allocated{' '}
-          <span className="font-semibold text-gray-700">
-            NRs {allocated.toLocaleString('en-IN')}
-          </span>
+          <span className="font-semibold text-gray-700">NRs {allocated.toLocaleString('en-IN')}</span>
         </span>
         <span className={`font-semibold ${over ? 'text-red-500' : 'text-gray-400'}`}>
           {over
@@ -75,10 +74,7 @@ function AllocationBar({
 
       <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden flex">
         {reservedForEMI > 0 && (
-          <div
-            className="h-full bg-gray-300 flex-shrink-0"
-            style={{ width: `${emiPct}%` }}
-          />
+          <div className="h-full bg-gray-300 flex-shrink-0" style={{ width: `${emiPct}%` }} />
         )}
         <motion.div
           className={`h-full flex-shrink-0 ${over ? 'bg-red-400' : 'bg-orange-400'}`}
@@ -91,9 +87,7 @@ function AllocationBar({
         <div className="flex items-center gap-4 mt-1.5">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-gray-300" />
-            <span className="text-[11px] text-gray-400">
-              EMI NRs {reservedForEMI.toLocaleString('en-IN')}
-            </span>
+            <span className="text-[11px] text-gray-400">EMI NRs {reservedForEMI.toLocaleString('en-IN')}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-orange-400" />
@@ -105,37 +99,24 @@ function AllocationBar({
   );
 }
 
+// ── Component ──────────────────────────────────────────────────────────────────
+
 export default function OnboardingModalCategorySetup1({
-  salary,
-  reservedForEMI,
-  rows,
-  error,
-  newCatName,
-  newCatAmount,
-  showAddRow,
-  isSaving,
-  onToggleRow,
-  onUpdateAmount,
-  onUpdateName,
-  onSetEditing,
-  onRemoveRow,
-  onNewCatNameChange,
-  onNewCatAmountChange,
-  onAddCustomRow,
-  onToggleAddRow,
-  onClearRows,
-  onBack,
-  onSave,
+  salary, reservedForEMI, rows, error,
+  newCatName, newCatAmount, showAddRow, isSaving,
+  onToggleRow, onUpdateAmount, onUpdateName, onSetEditing, onRemoveRow,
+  onNewCatNameChange, onNewCatAmountChange, onAddCustomRow, onToggleAddRow,
+  onClearRows, onResetRows, onBack, onSave,
 }: CategorySetupProps) {
-  // 'pick' = choose mode, 'edit' = editing rows
   const [mode, setMode] = useState<'pick' | 'edit'>('pick');
 
-  const totalSalary = salary + reservedForEMI;
-  const enabledCount = rows.filter((r) => r.enabled).length;
+  const totalSalary    = salary + reservedForEMI;
+  const enabledCount   = rows.filter((r) => r.enabled).length;
   const totalAllocated = rows.filter((r) => r.enabled).reduce((s, r) => s + r.amount, 0);
   const isOverAllocated = salary > 0 && totalAllocated > salary;
 
-  // ── Mode picker ──────────────────────────────────────────────────────────
+  // ── Mode picker ────────────────────────────────────────────────────────────
+
   if (mode === 'pick') {
     return (
       <div className="p-6 flex flex-col gap-4">
@@ -147,7 +128,11 @@ export default function OnboardingModalCategorySetup1({
         <button
           type="button"
           onClick={() => {
-            // rows are already pre-filled with recommended defaults from parent
+            // BUG FIX: Always call onResetRows before entering edit mode.
+            // If the user previously clicked "Build my own" (which wiped rows),
+            // rows would be empty here. onResetRows re-runs buildRows in the parent
+            // so the edit screen shows the correct recommended categories.
+            onResetRows();
             setMode('edit');
           }}
           className="w-full flex items-center gap-4 px-4 py-4 rounded-xl border-2 border-gray-200 hover:border-orange-300 hover:bg-orange-50 text-left transition-all group"
@@ -157,9 +142,7 @@ export default function OnboardingModalCategorySetup1({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800">Use recommended split</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              8 pre-filled categories — you can still edit them
-            </p>
+            <p className="text-xs text-gray-400 mt-0.5">8 pre-filled categories — you can still edit them</p>
           </div>
           <ChevronRight size={16} className="text-gray-300 group-hover:text-orange-400 transition-colors flex-shrink-0" />
         </button>
@@ -168,7 +151,6 @@ export default function OnboardingModalCategorySetup1({
         <button
           type="button"
           onClick={() => {
-            // Tell parent to wipe rows, then go to edit with empty list
             onClearRows();
             setMode('edit');
           }}
@@ -179,17 +161,14 @@ export default function OnboardingModalCategorySetup1({
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-800">Build my own</p>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Start blank and add your own categories
-            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Start blank and add your own categories</p>
           </div>
           <ChevronRight size={16} className="text-gray-300 group-hover:text-gray-500 transition-colors flex-shrink-0" />
         </button>
 
         <div className="flex items-center gap-3 pt-1">
           <button
-            type="button"
-            onClick={onBack}
+            type="button" onClick={onBack}
             className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600 font-medium transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -202,15 +181,11 @@ export default function OnboardingModalCategorySetup1({
     );
   }
 
-  // ── Edit screen ──────────────────────────────────────────────────────────
+  // ── Edit screen ────────────────────────────────────────────────────────────
+
   return (
     <div className="p-6 flex flex-col gap-4">
-
-      <AllocationBar
-        totalSalary={totalSalary}
-        reservedForEMI={reservedForEMI}
-        rows={rows}
-      />
+      <AllocationBar totalSalary={totalSalary} reservedForEMI={reservedForEMI} rows={rows} />
 
       {error && (
         <div className="bg-red-50 border border-red-100 text-red-500 px-3 py-2.5 rounded-xl text-xs">
@@ -250,7 +225,7 @@ export default function OnboardingModalCategorySetup1({
               )}
             </button>
 
-            {/* Name — click to rename */}
+            {/* Name */}
             {row.isEditing ? (
               <input
                 type="text"
@@ -296,12 +271,11 @@ export default function OnboardingModalCategorySetup1({
         ))}
       </div>
 
-      {/* Add custom category */}
+      {/* Add custom row */}
       {showAddRow ? (
         <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-dashed border-orange-200 bg-orange-50/30">
           <input
-            type="text"
-            placeholder="Category name"
+            type="text" placeholder="Category name"
             value={newCatName}
             onChange={(e) => onNewCatNameChange(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onAddCustomRow()}
@@ -311,29 +285,28 @@ export default function OnboardingModalCategorySetup1({
           <div className="relative w-24 flex-shrink-0">
             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-300 text-xs select-none">NRs</span>
             <input
-              type="number"
-              placeholder="0"
+              type="number" placeholder="0"
               value={newCatAmount}
               onChange={(e) => onNewCatAmountChange(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && onAddCustomRow()}
               className="w-full pl-7 pr-1.5 py-1.5 text-xs text-right bg-white border border-gray-200 rounded-lg outline-none focus:border-orange-400 transition-all"
             />
           </div>
-          <button type="button" onClick={onAddCustomRow} className="text-orange-500 hover:text-orange-600 font-semibold text-xs flex-shrink-0 px-1">
+          <button type="button" onClick={onAddCustomRow}
+            className="text-orange-500 hover:text-orange-600 font-semibold text-xs flex-shrink-0 px-1">
             Add
           </button>
-          <button type="button" onClick={onToggleAddRow} className="text-gray-300 hover:text-gray-500 flex-shrink-0">
+          <button type="button" onClick={onToggleAddRow}
+            className="text-gray-300 hover:text-gray-500 flex-shrink-0">
             <X size={13} />
           </button>
         </div>
       ) : (
         <button
-          type="button"
-          onClick={onToggleAddRow}
+          type="button" onClick={onToggleAddRow}
           className="flex items-center gap-1.5 text-sm text-orange-500 hover:text-orange-600 font-medium transition-colors"
         >
-          <Plus size={14} />
-          Add custom category
+          <Plus size={14} /> Add custom category
         </button>
       )}
 
@@ -350,18 +323,14 @@ export default function OnboardingModalCategorySetup1({
           Back
         </button>
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
           onClick={onSave}
           disabled={isSaving || enabledCount === 0 || isOverAllocated}
           className="flex-1 bg-orange-500 hover:bg-orange-600 text-white py-2.5 rounded-xl font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-colors"
         >
           {isSaving ? (
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-              className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
-            />
+            <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+              className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
           ) : (
             <>
               Save & Continue
@@ -372,7 +341,6 @@ export default function OnboardingModalCategorySetup1({
           )}
         </motion.button>
       </div>
-
     </div>
   );
 }
