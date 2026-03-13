@@ -2,18 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { Download, Calendar } from 'lucide-react';
+import { Download, ChevronDown } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 import type { ReportData, ExpenseFromDB } from '@/components/(user)/reports/types';
 import { fmtNRs } from '@/components/(user)/reports/ui';
-import SummarySection   from '@/components/(user)/reports/SummarySection';
-import IncomeSection    from '@/components/(user)/reports/IncomeSection';
-import ExpensesSection  from '@/components/(user)/reports/ExpensesSection';
-import CategorySection  from '@/components/(user)/reports/CategorySection';
-import EMISection       from '@/components/(user)/reports/EMISection';
-import GoalsSection     from '@/components/(user)/reports/GoalsSection';
+import SummarySection  from '@/components/(user)/reports/SummarySection';
+import IncomeSection   from '@/components/(user)/reports/IncomeSection';
+import ExpensesSection from '@/components/(user)/reports/ExpensesSection';
+import CategorySection from '@/components/(user)/reports/CategorySection';
+import EMISection      from '@/components/(user)/reports/EMISection';
+import GoalsSection    from '@/components/(user)/reports/GoalsSection';
 
 // ─── Date range helpers ───────────────────────────────────────────────────────
 
@@ -62,10 +62,18 @@ function getDateRange(key: RangeKey): { from: string; to: string; label: string 
   }
 }
 
-// currentMonthKey matches the format used in EMIMainContent (YYYY-MM-DD)
-function currentMonthKey(): string {
+// Returns the first and last day of the current month as ISO strings.
+// Used to query emi_payment_logs with gte/lte instead of LIKE —
+// because paid_month is a DATE column and LIKE does not work on dates in Postgres.
+function currentMonthBounds(): { first: string; last: string } {
   const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+  const fmt   = (d: Date) => d.toISOString().split('T')[0];
+  return {
+    first: fmt(new Date(year, month, 1)),
+    last:  fmt(new Date(year, month + 1, 0)),
+  };
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -80,16 +88,16 @@ export default function ReportsMainContent() {
 
   const { from, to, label } = getDateRange(range);
 
-  // ── Fetch all data ─────────────────────────────────────────────────────────
+  // ── Fetch ─────────────────────────────────────────────────────────────────
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
     setIsLoading(true);
 
-    const monthKey = currentMonthKey();
+    // Use gte/lte for the date column — .like() does not work on Postgres date types
+    const { first: monthFirst, last: monthLast } = currentMonthBounds();
 
     const [expRes, incRes, catRes, emiRes, logRes, goalRes, userRes] = await Promise.all([
-      // Expenses joined with budget_categories (many-to-one → single object)
       supabase
         .from('expenses')
         .select('description, amount, expense_date, payment_method, budget_categories(category_name)')
@@ -111,21 +119,21 @@ export default function ReportsMainContent() {
         .select('category_name, budget_limit')
         .eq('user_id', user.id),
 
-      // Fetch ALL active EMIs (not filtered by date — loans are ongoing)
       supabase
         .from('emi_payments')
         .select('emi_id, loan_name, emi_amount, total_amount, payment_day, start_date, is_active')
         .eq('user_id', user.id)
         .eq('is_active', true),
 
-      // Fetch payment logs for this month to derive paid_this_month
+      // Fix: paid_month is a DATE column — use gte/lte, not .like()
+      // This matches exactly how isPaidThisMonth works in utils.ts
       supabase
         .from('emi_payment_logs')
         .select('emi_id')
         .eq('user_id', user.id)
-        .like('paid_month', `${monthKey.slice(0, 7)}%`),
+        .gte('paid_month', monthFirst)
+        .lte('paid_month', monthLast),
 
-      // goals uses 'title' column (confirmed from SQL schema)
       supabase
         .from('goals')
         .select('title, target_amount, saved_amount')
@@ -138,12 +146,12 @@ export default function ReportsMainContent() {
         .maybeSingle(),
     ]);
 
-    // Build set of paid EMI ids this month for quick lookup
+    // Set of emi_ids paid this month
     const paidEmiIds = new Set((logRes.data || []).map((l) => l.emi_id));
 
-    // Build per-category spent map.
-    // budget_categories join returns a SINGLE OBJECT (many-to-one FK), not an array.
+    // budget_categories is many-to-one → Supabase returns a SINGLE OBJECT not array
     const rawExpenses = (expRes.data || []) as unknown as ExpenseFromDB[];
+
     const spentMap: Record<string, number> = {};
     for (const e of rawExpenses) {
       const name = e.budget_categories?.category_name ?? null;
@@ -172,7 +180,6 @@ export default function ReportsMainContent() {
         budget: Number(c.budget_limit),
       })),
 
-      // Each EMI now carries paid_this_month derived from emi_payment_logs
       emis: (emiRes.data || []).map((e) => ({
         emi_id:          e.emi_id,
         loan_name:       e.loan_name,
@@ -184,8 +191,6 @@ export default function ReportsMainContent() {
         paid_this_month: paidEmiIds.has(e.emi_id),
       })),
 
-      // saved_amount on the goals row already includes all contributions
-      // (ContributeModal updates saved_amount directly on the goals row)
       goals: (goalRes.data || []).map((g) => ({
         title:         g.title,
         target_amount: Number(g.target_amount),
@@ -200,14 +205,14 @@ export default function ReportsMainContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // ── Derived totals (passed to Summary + PDF) ───────────────────────────────
+  // ── Derived totals ─────────────────────────────────────────────────────────
 
   const totalExpenses = data?.expenses.reduce((s, e) => s + e.amount, 0) ?? 0;
   const totalIncome   = (data?.income.reduce((s, i) => s + i.amount, 0) ?? 0) + (data?.salary ?? 0);
   const totalEMI      = data?.emis.reduce((s, e) => s + e.emi_amount, 0) ?? 0;
   const netBalance    = totalIncome - totalExpenses - totalEMI;
 
-  // ── PDF generation ─────────────────────────────────────────────────────────
+  // ── PDF ───────────────────────────────────────────────────────────────────
 
   const handleDownload = async () => {
     if (!data) return;
@@ -218,6 +223,8 @@ export default function ReportsMainContent() {
 
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
+    const PAGE_H = 297; // A4 height mm
+    const FOOTER = 12;  // space reserved at bottom for footer
     const PW = 210;
     const M  = 16;
     const CW = PW - M * 2;
@@ -234,7 +241,7 @@ export default function ReportsMainContent() {
     const GREEN   : RGB = [ 22, 163,  74];
     const RED     : RGB = [239,  68,  68];
 
-    // ── Header ───────────────────────────────────────────────────────────
+    // ── Header ────────────────────────────────────────────────────────────
     doc.setFillColor(...ORANGE);
     doc.rect(0, 0, PW, 28, 'F');
     doc.setFillColor(...ORANGE_D);
@@ -260,7 +267,7 @@ export default function ReportsMainContent() {
 
     let y = 34;
 
-    // ── Summary card ─────────────────────────────────────────────────────
+    // ── Summary card ──────────────────────────────────────────────────────
     doc.setFillColor(...ORANGE_L);
     doc.setDrawColor(...ORANGE);
     doc.setLineWidth(0.4);
@@ -293,8 +300,20 @@ export default function ReportsMainContent() {
 
     y += 36;
 
-    // ── Section heading helper ────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────
+
+    // If less than `needed` mm remain on the page, add a new page.
+    // This prevents a heading from appearing alone at the bottom of a page.
+    const ensureSpace = (needed: number) => {
+      if (y + needed > PAGE_H - FOOTER) {
+        doc.addPage();
+        y = 16;
+      }
+    };
+
+    // Section heading — always ensure at least 50mm below it for the table
     const section = (title: string) => {
+      ensureSpace(50);
       y += 2;
       doc.setFillColor(...ORANGE);
       doc.rect(M, y, 3, 6, 'F');
@@ -366,11 +385,7 @@ export default function ReportsMainContent() {
         ...tbl, startY: y,
         head: [['Description', 'Category', 'Date', 'Method', 'Amount']],
         body: data.expenses.map((e) => [
-          e.description,
-          e.category_name || '—',
-          e.expense_date,
-          e.payment_method || '—',
-          fmtNRs(e.amount),
+          e.description, e.category_name || '—', e.expense_date, e.payment_method || '—', fmtNRs(e.amount),
         ]),
         columnStyles: { 4: { halign: 'right' as const, fontStyle: 'bold' as const } },
       });
@@ -431,8 +446,8 @@ export default function ReportsMainContent() {
         },
         didParseCell: (d) => {
           if (d.section === 'body' && d.column.index === 5) {
-            d.cell.styles.textColor  = d.cell.raw === 'Paid ✓' ? GREEN : RED;
-            d.cell.styles.fontStyle  = 'bold';
+            d.cell.styles.textColor = d.cell.raw === 'Paid ✓' ? GREEN : RED;
+            d.cell.styles.fontStyle = 'bold';
           }
         },
       });
@@ -468,7 +483,7 @@ export default function ReportsMainContent() {
       });
     }
 
-    // ── Page footer ───────────────────────────────────────────────────────
+    // ── Footer on every page ──────────────────────────────────────────────
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const totalPages = (doc as any).internal.getNumberOfPages() as number;
     for (let p = 1; p <= totalPages; p++) {
@@ -486,57 +501,64 @@ export default function ReportsMainContent() {
     setIsGenerating(false);
   };
 
-  // ── Render ─────────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
 
-        {/* Page header */}
-        <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
+        {/* ── Page header — title + period dropdown + download button ── */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 tracking-tight">Reports</h1>
-            <p className="text-gray-500 text-sm mt-1.5">Download a PDF summary of your finances</p>
+            <p className="text-gray-500 text-sm mt-1">Your financial summary</p>
           </div>
-          <motion.button
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            onClick={handleDownload}
-            disabled={isGenerating || isLoading || !data}
-            className="inline-flex items-center gap-2.5 px-5 py-2.5 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm shadow-md shadow-orange-200/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isGenerating ? (
-              <>
-                <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-                Generating...
-              </>
-            ) : (
-              <><Download size={15} /> Download PDF</>
-            )}
-          </motion.button>
+
+          {/* Right side: dropdown + download */}
+          <div className="flex items-center gap-2">
+
+            {/* Period dropdown */}
+            <div className="relative">
+              <select
+                value={range}
+                onChange={(e) => setRange(e.target.value as RangeKey)}
+                className="appearance-none bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-4 py-2.5 pr-8 shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 cursor-pointer transition-all"
+              >
+                {RANGES.map((r) => (
+                  <option key={r.key} value={r.key}>{r.label}</option>
+                ))}
+              </select>
+              {/* Custom chevron */}
+              <ChevronDown
+                size={14}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+              />
+            </div>
+
+            {/* Download button — icon only with tooltip on hover */}
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleDownload}
+              disabled={isGenerating || isLoading || !data}
+              title="Download PDF report"
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-orange-500 hover:bg-orange-600 text-white shadow-md shadow-orange-200/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                  className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                />
+              ) : (
+                <Download size={16} />
+              )}
+            </motion.button>
+          </div>
         </div>
 
-        {/* Range selector */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Calendar size={16} className="text-orange-500" />
-            <p className="text-sm font-semibold text-gray-700">Select Period</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {RANGES.map((r) => (
-              <button key={r.key} onClick={() => setRange(r.key)}
-                className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-                  range === r.key
-                    ? 'bg-orange-500 text-white shadow-sm'
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {r.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-gray-400 mt-3">{from} → {to}</p>
-        </div>
+        {/* Period label shown below header as small text */}
+        <p className="text-xs text-gray-400 mb-6">{from} → {to}</p>
 
         {/* Skeleton */}
         {isLoading && (
@@ -545,14 +567,16 @@ export default function ReportsMainContent() {
               <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
                 <div className="h-4 w-32 bg-gray-100 rounded animate-pulse mb-3" />
                 <div className="space-y-2">
-                  {[...Array(3)].map((_, j) => <div key={j} className="h-3 bg-gray-50 rounded animate-pulse" />)}
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} className="h-3 bg-gray-50 rounded animate-pulse" />
+                  ))}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {/* All sections */}
+        {/* Sections */}
         {!isLoading && data && (
           <div className="space-y-5">
             <SummarySection
