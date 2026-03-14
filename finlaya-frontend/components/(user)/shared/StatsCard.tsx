@@ -1,25 +1,6 @@
 'use client';
 
-import { 
-  Wallet, 
-  TrendingUp, 
-  TrendingDown, 
-  PiggyBank, 
-  LucideIcon,
-  ArrowUpRight,
-  ArrowDownRight
-} from 'lucide-react';
-
-interface StatConfig {
-  title: string;
-  amount: string;
-  icon: LucideIcon;
-  iconBg: string;
-  iconColor: string;
-  badgeBg: string;
-  badgeBorder: string;
-  dotColor: string;
-}
+import { Wallet, TrendingUp, TrendingDown, PiggyBank, LucideIcon } from 'lucide-react';
 
 interface StatsCardProps {
   statId: 'balance' | 'income' | 'expenses' | 'savings';
@@ -28,6 +9,15 @@ interface StatsCardProps {
   savings?: number;
   totalBalance?: number;
   isLoading?: boolean;
+}
+
+interface StatConfig {
+  title: string;
+  amount: string;
+  icon: LucideIcon;
+  iconColor: string;
+  iconBg: string;
+  valueColor: string;
 }
 
 function formatNRS(value: number): string {
@@ -47,90 +37,63 @@ export default function StatsCard({
       title: 'Total Balance',
       amount: formatNRS(totalBalance),
       icon: Wallet,
+      iconColor: 'text-orange-500',
       iconBg: 'bg-orange-50',
-      iconColor: 'text-orange-600',
-      badgeBg: 'bg-orange-50',
-      badgeBorder: 'border-orange-100',
-      dotColor: 'bg-orange-500',
+      valueColor: 'text-gray-900',
     },
     income: {
       title: 'Monthly Income',
       amount: formatNRS(monthlySalary),
       icon: TrendingUp,
-      iconBg: 'bg-green-50',
-      iconColor: 'text-green-600',
-      badgeBg: 'bg-green-50',
-      badgeBorder: 'border-green-100',
-      dotColor: 'bg-green-500',
+      iconColor: 'text-emerald-500',
+      iconBg: 'bg-emerald-50',
+      valueColor: 'text-gray-900',
     },
     expenses: {
       title: 'Monthly Expenses',
       amount: formatNRS(monthlyExpenses),
       icon: TrendingDown,
+      iconColor: 'text-red-500',
       iconBg: 'bg-red-50',
-      iconColor: 'text-red-600',
-      badgeBg: 'bg-red-50',
-      badgeBorder: 'border-red-100',
-      dotColor: 'bg-red-500',
+      valueColor: 'text-gray-900',
     },
     savings: {
       title: 'Total Savings',
       amount: formatNRS(savings),
       icon: PiggyBank,
-      iconBg: 'bg-yellow-50',
-      iconColor: 'text-yellow-600',
-      badgeBg: 'bg-yellow-50',
-      badgeBorder: 'border-yellow-100',
-      dotColor: 'bg-yellow-500',
+      iconColor: 'text-amber-500',
+      iconBg: 'bg-amber-50',
+      valueColor: 'text-gray-900',
     },
   };
 
   const stat = statsMap[statId];
   const Icon = stat.icon;
-  // Determine trend icon based on stat type (optional logic, kept simple here)
-  const isPositive = statId !== 'expenses';
-  const TrendIcon = isPositive ? ArrowUpRight : ArrowDownRight;
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm animate-pulse">
-        <div className="flex items-start justify-between mb-5">
-          <div className="w-12 h-12 rounded-xl bg-gray-100" />
-          <div className="w-16 h-6 rounded-full bg-gray-100" />
-        </div>
-        <div className="space-y-2">
-          <div className="w-3/4 h-8 rounded bg-gray-100" />
-          <div className="w-1/2 h-4 rounded bg-gray-50" />
-        </div>
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 animate-pulse">
+        <div className="w-9 h-9 rounded-xl bg-gray-100 mb-4" />
+        <div className="h-7 w-3/4 bg-gray-100 rounded mb-2" />
+        <div className="h-4 w-1/2 bg-gray-50 rounded" />
       </div>
     );
   }
 
   return (
-    <div className="group relative bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md hover:border-gray-200 transition-all duration-300 ease-in-out">
-      {/* Top Section: Icon & Color Indicator */}
-      <div className="flex items-start justify-between mb-5">
-        <div className={`p-3 rounded-xl ${stat.iconBg} transition-transform duration-300 group-hover:scale-105`}>
-          <Icon size={24} className={stat.iconColor} strokeWidth={2} />
-        </div>
-        
-        {/* Color Badge with Dot Indicator */}
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border ${stat.badgeBg} ${stat.badgeBorder}`}>
-          <div className={`w-2 h-2 rounded-full ${stat.dotColor} ring-2 ring-white`} />
-          <TrendIcon size={14} className={stat.iconColor} strokeWidth={2} />
-        </div>
+    <div className="bg-white rounded-2xl border border-gray-100 p-5 hover:border-gray-200 hover:shadow-sm transition-all duration-200">
+      {/* Icon */}
+      <div className={`w-9 h-9 rounded-xl ${stat.iconBg} flex items-center justify-center mb-4`}>
+        <Icon size={18} className={stat.iconColor} strokeWidth={2} />
       </div>
 
-      {/* Bottom Section: Amount & Title */}
-      <div className="space-y-1">
-        <h3 className="text-3xl font-bold text-gray-900 tracking-tight tabular-nums">
-          {stat.amount}
-        </h3>
-        <p className="text-gray-500 text-sm font-medium">{stat.title}</p>
-      </div>
-      
-      {/* Subtle decorative gradient at bottom */}
-      <div className={`absolute bottom-0 left-6 right-6 h-1 rounded-b-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${stat.iconBg}`} />
+      {/* Amount */}
+      <p className={`text-2xl font-bold ${stat.valueColor} tabular-nums tracking-tight mb-1`}>
+        {stat.amount}
+      </p>
+
+      {/* Label */}
+      <p className="text-sm text-gray-500">{stat.title}</p>
     </div>
   );
 }

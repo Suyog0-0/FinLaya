@@ -4,7 +4,6 @@ import { useState, useRef, useEffect } from 'react';
 import { ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Calendar, CreditCard } from 'lucide-react';
 import ConfirmDeleteModal from '@/components/modals/ConfirmDelete/ConfirmDeleteModal';
 
-
 interface Transaction {
   expense_id: number;
   description: string;
@@ -33,16 +32,11 @@ function ThreeDotMenu({
   onEdit: (t: Transaction) => void;
   onDelete: (id: number, type: 'expense' | 'income') => void;
 }) {
-  
-  
-  
-  
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  
-  
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
     await onDelete(transaction.expense_id, transaction.type);
@@ -52,65 +46,42 @@ function ThreeDotMenu({
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-
-
-
-
-
-
-
-
   return (
     <div className="relative" ref={ref}>
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen((v) => !v);
-        }}
-        className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
       >
-        <MoreVertical size={16} />
+        <MoreVertical size={14} />
       </button>
 
       {open && (
-        <div className="absolute right-0 top-10 z-20 w-40 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 top-8 z-20 w-36 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
           <button
             type="button"
-            onClick={() => {
-              setOpen(false);
-              onEdit(transaction);
-            }}
-            className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+            onClick={() => { setOpen(false); onEdit(transaction); }}
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
           >
-            <Pencil size={14} />
-            Edit
+            <Pencil size={13} /> Edit
           </button>
-          <div className="h-px bg-gray-100 mx-4" />
+          <div className="h-px bg-gray-100 mx-3" />
           <button
             type="button"
-            onClick={() => {
-              setOpen(false);
-              setShowDeleteModal(true)
-            }}
-            className="flex items-center gap-2.5 w-full px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors"
+            onClick={() => { setOpen(false); setShowDeleteModal(true); }}
+            className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
-            <Trash2 size={14} />
-            Delete
+            <Trash2 size={13} /> Delete
           </button>
         </div>
-        
       )}
 
-      {/* Confirm Delete Modal */}
       <ConfirmDeleteModal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -122,7 +93,6 @@ function ThreeDotMenu({
   );
 }
 
-
 export default function TransactionHistory({
   filtered,
   isLoading,
@@ -131,81 +101,81 @@ export default function TransactionHistory({
   onDelete,
 }: TransactionHistoryProps) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-bold text-gray-900">Transaction History</h2>
-        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+
+      {/* Header */}
+      <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
+        <h2 className="text-sm font-bold text-gray-900">Transaction History</h2>
+        <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
           {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
         </span>
       </div>
 
+      {/* Loading skeleton */}
       {isLoading ? (
-        <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-gray-100">
-              <div className="w-10 h-10 rounded-lg bg-gray-100 animate-pulse" />
-              <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-gray-100 rounded animate-pulse" />
-                <div className="h-3 w-24 bg-gray-50 rounded animate-pulse" />
+        <div className="divide-y divide-gray-50">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-5 py-3 animate-pulse">
+              <div className="w-8 h-8 rounded-lg bg-gray-100 flex-shrink-0" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-3.5 w-32 bg-gray-100 rounded" />
+                <div className="h-3 w-24 bg-gray-50 rounded" />
               </div>
-              <div className="h-4 w-20 bg-gray-100 rounded animate-pulse" />
+              <div className="h-3.5 w-20 bg-gray-100 rounded" />
             </div>
           ))}
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
-            <ArrowDownLeft size={24} className="text-gray-400" />
+
+        /* Empty state */
+        <div className="flex flex-col items-center justify-center py-14">
+          <div className="w-10 h-10 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
+            <ArrowDownLeft size={18} className="text-gray-400" />
           </div>
           <p className="text-gray-500 text-sm font-medium">No transactions found</p>
-          <p className="text-gray-400 text-xs mt-1">Start adding your expenses and income</p>
+          <p className="text-gray-400 text-xs mt-1">Try a different month or category</p>
         </div>
+
       ) : (
-        <div className="space-y-2">
+
+        /* Transaction rows — compact py-2.5 */
+        <div className="divide-y divide-gray-50">
           {filtered.map((t) => {
             const isIncome = t.type === 'income';
             return (
               <div
                 key={`${t.type}-${t.expense_id}`}
-                className="group flex items-center justify-between p-4 rounded-xl border border-gray-100 hover:bg-gray-50 hover:border-gray-200 hover:shadow-sm transition-all duration-200"
+                className="flex items-center justify-between px-5 py-2.5 hover:bg-gray-50 transition-colors"
               >
                 {/* Left: icon + info */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className={`w-10 h-10 flex items-center justify-center rounded-xl flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
-                    {isIncome ? (
-                      <ArrowUpRight size={18} className="text-green-600" />
-                    ) : (
-                      <ArrowDownLeft size={18} className="text-red-600" />
-                    )}
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <div className={`w-8 h-8 flex items-center justify-center rounded-lg flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
+                    {isIncome
+                      ? <ArrowUpRight size={15} className="text-green-600" />
+                      : <ArrowDownLeft size={15} className="text-red-600" />
+                    }
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{t.description}</p>
-                    <div className="flex items-center gap-2 mt-1 flex-wrap">
-                      {/* Category badge */}
+                    <p className="text-sm font-semibold text-gray-800 truncate leading-tight">
+                      {t.description}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
                       {t.category_name ? (
-                        <span
-                          className={`text-xs px-2 py-0.5 rounded-md font-medium ${
-                            categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'
-                          }`}
-                        >
+                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'}`}>
                           {t.category_name}
                         </span>
                       ) : isIncome ? (
-                        <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-green-100 text-green-700">
+                        <span className="text-[11px] px-1.5 py-0.5 rounded font-medium bg-green-100 text-green-700">
                           Income
                         </span>
                       ) : null}
-                      
-                      {/* Date */}
-                      <span className="flex items-center gap-1 text-xs text-gray-500">
-                        <Calendar size={12} />
+                      <span className="flex items-center gap-0.5 text-[11px] text-gray-400">
+                        <Calendar size={10} />
                         {new Date(t.expense_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                       </span>
-                      
-                      {/* Payment Method */}
                       {t.payment_method && (
-                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-md font-medium bg-gray-100 text-gray-600">
-                          <CreditCard size={12} />
+                        <span className="flex items-center gap-0.5 text-[11px] text-gray-400">
+                          <CreditCard size={10} />
                           {t.payment_method}
                         </span>
                       )}
@@ -214,7 +184,7 @@ export default function TransactionHistory({
                 </div>
 
                 {/* Right: amount + menu */}
-                <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
                   <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
                     {isIncome ? '+' : '-'}NRs {Number(t.amount).toLocaleString('en-IN')}
                   </p>
