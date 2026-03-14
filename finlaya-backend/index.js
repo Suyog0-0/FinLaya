@@ -13,9 +13,27 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: process.env.CORS_ORIGINS || 'http://localhost:3000',
-  credentials: true
+  origin: (origin, callback) => {
+    // Strip trailing slash from env value and incoming origin before comparing
+    const allowed = (process.env.CORS_ORIGINS || 'http://localhost:3000')
+      .split(',')
+      .map(o => o.trim().replace(/\/$/, ''));
+
+    // Allow requests with no origin (Postman, server-to-server)
+    if (!origin) return callback(null, true);
+
+    if (allowed.includes(origin.replace(/\/$/, ''))) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    }
+  },
+  credentials: true,
 }));
+
+
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
