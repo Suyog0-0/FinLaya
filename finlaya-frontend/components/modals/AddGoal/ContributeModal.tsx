@@ -11,7 +11,6 @@ interface ContributeModalProps {
   targetAmount:     number;
   savedAmount:      number;
   availableSavings: number;
-  // Tells the modal where the limit came from so we can show the right label
   savingsSource:    'category' | 'net';
   onContribute:     (amount: number) => Promise<void>;
 }
@@ -28,9 +27,6 @@ export default function ContributeModal({
   const remaining       = Math.max(0, targetAmount - savedAmount);
   const parsedAmount    = parseFloat(amount) || 0;
 
-  // Warn if over savings limit, but do NOT hard block.
-  // If the user has no Savings category, savingsSource === 'net' and the limit
-  // is just the net spendable balance — still just a warning.
   const isOverSavings = parsedAmount > 0 && parsedAmount > availableSavings;
   const isOverGoal    = parsedAmount > 0 && parsedAmount > remaining;
 
@@ -50,9 +46,6 @@ export default function ContributeModal({
       return;
     }
 
-    // No hard block on savings — user can contribute even if over savings budget.
-    // They already see the amber warning below the input.
-
     setError('');
     setSaving(true);
     try {
@@ -69,9 +62,6 @@ export default function ContributeModal({
     onClose();
   };
 
-  const inputClass =
-    'w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none text-sm transition-all bg-slate-50 focus:bg-white';
-
   if (!isOpen) return null;
 
   return (
@@ -86,42 +76,43 @@ export default function ContributeModal({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-white w-full max-w-lg rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto"
+          className="bg-white w-full max-w-lg rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
-                <Target size={16} className="text-orange-500" />
+          <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
+                <Target size={14} className="text-orange-500" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-slate-800">Contribute to &ldquo;{goalTitle}&rdquo;</h2>
-                <p className="text-xs text-slate-400">Add funds to your goal</p>
+                <h2 className="text-sm font-bold text-gray-800">Contribute to &ldquo;{goalTitle}&rdquo;</h2>
+                <p className="text-xs text-gray-500">Add funds to your goal</p>
               </div>
             </div>
             <button
               onClick={handleClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors"
+              className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
 
-          <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
+          <form onSubmit={handleSubmit} className="px-5 py-4 space-y-4">
             {error && (
-              <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-                ⚠️ {error}
+              <div className="bg-red-50 border border-red-100 text-red-600 px-3 py-2 rounded-lg text-xs flex items-center gap-1.5">
+                <AlertTriangle size={12} className="text-red-500" />
+                {error}
               </div>
             )}
 
             {/* Progress summary */}
-            <div className="bg-slate-50 rounded-xl p-4">
-              <div className="flex justify-between text-sm mb-1">
-                <span className="text-slate-500">Progress</span>
-                <span className="font-medium">{Math.round(progressPercent)}%</span>
+            <div className="bg-gray-50 rounded-lg p-3">
+              <div className="flex justify-between text-xs mb-1">
+                <span className="text-gray-500">Progress</span>
+                <span className="font-medium text-gray-700">{Math.round(progressPercent)}%</span>
               </div>
-              <div className="w-full h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden mb-2">
                 <motion.div
                   className="h-full bg-orange-500 rounded-full"
                   initial={{ width: 0 }}
@@ -129,74 +120,77 @@ export default function ContributeModal({
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 />
               </div>
-              <div className="flex justify-between text-xs mt-2">
-                <span className="text-slate-500">Saved: NRs {savedAmount.toLocaleString()}</span>
-                <span className="text-slate-500">Target: NRs {targetAmount.toLocaleString()}</span>
-              </div>
-              <div className="mt-1 text-xs text-orange-600 font-medium">
-                Remaining: NRs {remaining.toLocaleString()}
+              
+              <div className="grid grid-cols-3 gap-2 text-xs">
+                <div className="text-center">
+                  <div className="text-gray-500 mb-0.5">Saved</div>
+                  <div className="font-semibold text-green-600">NRs {savedAmount.toLocaleString()}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-gray-500 mb-0.5">Target</div>
+                  <div className="font-semibold text-blue-600">NRs {targetAmount.toLocaleString()}</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-gray-500 mb-0.5">Remaining</div>
+                  <div className="font-semibold text-orange-600">NRs {remaining.toLocaleString()}</div>
+                </div>
               </div>
             </div>
 
             {/* Contribution amount */}
             <div>
-              <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                Contribution Amount (NRs)
+              <label className="text-xs text-gray-500 font-semibold block mb-1.5">
+                Contribution Amount
               </label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">NRs</span>
+              <div className="flex items-center border border-gray-200 rounded-lg bg-gray-50 focus-within:border-orange-300">
+                <span className="px-3 py-2 text-sm font-medium text-gray-500">NRs</span>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => { setAmount(e.target.value); setError(''); }}
-                  placeholder="Enter amount"
+                  placeholder="0.00"
                   min="1" step="any"
-                  className={inputClass}
+                  className="w-full py-2.5 px-2 bg-transparent outline-none text-gray-800 placeholder-gray-400"
                   autoFocus
                 />
               </div>
 
               {/* Available savings info */}
-              <p className="text-xs text-slate-400 mt-1.5">
-                {savingsLabel}:{' '}
-                <span className={`font-medium ${availableSavings <= 0 ? 'text-red-500' : 'text-slate-600'}`}>
+              <p className="text-xs text-gray-500 mt-2">
+                {savingsLabel}: 
+                <span className={`ml-1 font-medium ${availableSavings <= 0 ? 'text-red-500' : 'text-gray-700'}`}>
                   NRs {availableSavings.toLocaleString()}
                 </span>
-                {savingsSource === 'net' && availableSavings <= 0 && (
-                  <span className="text-slate-400"> (no savings budget set)</span>
-                )}
               </p>
 
-              {/* Amber warning when over savings — not a hard block */}
+              {/* Warning when over savings */}
               {isOverSavings && (
-                <motion.div
-                  initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-2 mt-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-xl"
-                >
-                  <AlertTriangle size={13} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs text-amber-700 font-medium leading-relaxed">
-                    This exceeds your {savingsLabel.toLowerCase()} of NRs {availableSavings.toLocaleString()}.
-                    {savingsSource === 'net'
-                      ? ' You can still contribute — consider setting up a Savings category for better tracking.'
-                      : ' You can still contribute, but it will exceed your savings budget.'
-                    }
+                <div className="flex items-start gap-1.5 mt-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertTriangle size={12} className="text-amber-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs text-amber-700">
+                    Exceeds your {savingsLabel.toLowerCase()} of NRs {availableSavings.toLocaleString()}
                   </p>
-                </motion.div>
+                </div>
               )}
             </div>
 
             <button
               type="submit"
-              disabled={saving}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white py-3.5 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={saving || !amount}
+              className={`w-full py-3 rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2 ${
+                saving || !amount 
+                  ? 'bg-gray-200 text-gray-400 cursor-not-allowed' 
+                  : 'bg-orange-500 hover:bg-orange-600 text-white'
+              }`}
             >
               {saving ? (
-                <motion.div animate={{ rotate: 360 }}
+                <motion.div 
+                  animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
                   className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
                 />
               ) : (
-                <><Plus size={16} /> Add to Goal</>
+                <><Plus size={14} /> Add to Goal</>
               )}
             </button>
           </form>
