@@ -5,27 +5,44 @@ import { Plus, Tag, Pencil, Trash2, Check, X, AlertCircle } from 'lucide-react';
 import { Category, getCategoryIcon, formatNRs } from './utils';
 import ProgressBar from './ProgressBar';
 
+// ── Color accent per category name ────────────────────────────────────────────
+// Returns a left-border color and a subtle row tint for visual variety.
+const ROW_ACCENTS: Record<string, { border: string; tint: string }> = {
+  Housing:        { border: 'border-l-yellow-400',  tint: 'bg-yellow-50/30'  },
+  Food:           { border: 'border-l-orange-400',  tint: 'bg-orange-50/30'  },
+  Transportation: { border: 'border-l-blue-400',    tint: 'bg-blue-50/20'    },
+  Transport:      { border: 'border-l-blue-400',    tint: 'bg-blue-50/20'    },
+  Utilities:      { border: 'border-l-gray-400',    tint: 'bg-gray-50/40'    },
+  Health:         { border: 'border-l-teal-400',    tint: 'bg-teal-50/20'    },
+  Entertainment:  { border: 'border-l-purple-400',  tint: 'bg-purple-50/20'  },
+  Savings:        { border: 'border-l-emerald-400', tint: 'bg-emerald-50/20' },
+  Others:         { border: 'border-l-gray-300',    tint: 'bg-gray-50/30'    },
+  Other:          { border: 'border-l-gray-300',    tint: 'bg-gray-50/30'    },
+};
+const DEFAULT_ACCENT = { border: 'border-l-indigo-400', tint: 'bg-indigo-50/20' };
+
+function getAccent(name: string) {
+  return ROW_ACCENTS[name] ?? DEFAULT_ACCENT;
+}
+
 // ── View row ───────────────────────────────────────────────────────────────────
 function CategoryRow({
-  cat,
-  salary,
-  onEdit,
-  onDelete,
+  cat, salary, onEdit, onDelete,
 }: {
-  cat: Category;
-  salary: number;
-  onEdit: () => void;
-  onDelete: (id: number) => void;
+  cat: Category; salary: number;
+  onEdit: () => void; onDelete: (id: number) => void;
 }) {
   const { Icon, colorClass } = getCategoryIcon(cat.category_name);
+  const { border, tint }     = getAccent(cat.category_name);
   const remaining = cat.budget_limit - cat.spent;
-  const isOver = cat.spent > cat.budget_limit && cat.budget_limit > 0;
+  const isOver    = cat.spent > cat.budget_limit && cat.budget_limit > 0;
   const salaryPct = salary > 0
     ? Math.min(Math.round((cat.budget_limit / salary) * 100), 100)
     : cat.allocation_percentage;
 
   return (
-    <tr className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors group">
+    <tr className={`border-b border-gray-50 border-l-4 ${border} ${tint} hover:brightness-[0.98] transition-all group`}>
+      {/* Category name + icon */}
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
           <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass}`}>
@@ -38,27 +55,40 @@ function CategoryRow({
         </div>
       </td>
 
+      {/* Budget */}
       <td className="px-5 py-3.5">
-        <span className="text-sm text-gray-700 tabular-nums">{formatNRs(cat.budget_limit)}</span>
+        <span className="text-sm text-gray-700 tabular-nums font-medium">
+          {formatNRs(cat.budget_limit)}
+        </span>
       </td>
 
+      {/* Spent — red tint if over */}
       <td className="px-5 py-3.5">
         <span className={`text-sm tabular-nums font-medium ${isOver ? 'text-red-500' : 'text-gray-700'}`}>
-          {isOver && <span className="mr-1">⚠</span>}
+          {isOver && <span className="mr-1 text-xs">⚠</span>}
           {formatNRs(cat.spent)}
         </span>
       </td>
 
+      {/* Remaining — green if positive, red if negative */}
       <td className="px-5 py-3.5 hidden md:table-cell">
-        <span className={`text-sm tabular-nums font-medium ${remaining < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+        <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${
+          remaining < 0
+            ? 'bg-red-100 text-red-600'
+            : remaining === 0
+              ? 'bg-gray-100 text-gray-500'
+              : 'bg-emerald-100 text-emerald-700'
+        }`}>
           {remaining < 0 ? '-' : ''}{formatNRs(Math.abs(remaining))}
         </span>
       </td>
 
+      {/* Progress bar */}
       <td className="px-5 py-3.5 hidden lg:table-cell w-40">
         <ProgressBar spent={cat.spent} budget={cat.budget_limit} />
       </td>
 
+      {/* Actions */}
       <td className="px-5 py-3.5">
         <div className="flex items-center justify-end gap-1">
           <button
@@ -83,26 +113,22 @@ function CategoryRow({
 
 // ── Edit row ───────────────────────────────────────────────────────────────────
 function EditCategoryRow({
-  cat,
-  salary,
-  onSave,
-  onCancel,
+  cat, salary, onSave, onCancel,
 }: {
-  cat: Category;
-  salary: number;
+  cat: Category; salary: number;
   onSave: (id: number, name: string, budget: number) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [editName, setEditName] = useState(cat.category_name);
+  const [editName,   setEditName]   = useState(cat.category_name);
   const [editBudget, setEditBudget] = useState(String(cat.budget_limit));
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [saving,     setSaving]     = useState(false);
+  const [error,      setError]      = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { nameRef.current?.focus(); }, []);
 
   const budgetNum = parseFloat(editBudget) || 0;
-  const pct = salary > 0 && budgetNum > 0
+  const pct       = salary > 0 && budgetNum > 0
     ? Math.min(Math.round((budgetNum / salary) * 100), 100)
     : 0;
 
@@ -123,7 +149,7 @@ function EditCategoryRow({
   };
 
   return (
-    <tr className="border-b border-orange-100 bg-orange-50/30">
+    <tr className="border-b border-orange-100 border-l-4 border-l-orange-400 bg-orange-50/30">
       <td className="px-5 py-2.5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
@@ -131,8 +157,7 @@ function EditCategoryRow({
           </div>
           <input
             ref={nameRef}
-            type="text"
-            value={editName}
+            type="text" value={editName}
             onChange={(e) => setEditName(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Category name"
@@ -146,16 +171,13 @@ function EditCategoryRow({
           <div className="relative w-40">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
             <input
-              type="number"
-              value={editBudget}
+              type="number" value={editBudget}
               onChange={(e) => { setEditBudget(e.target.value); setError(''); }}
               onKeyDown={handleKey}
-              min="0"
-              placeholder="0"
+              min="0" placeholder="0"
               className={`text-sm text-gray-800 border rounded-lg pl-9 pr-2.5 py-1.5 outline-none focus:ring-2 w-full tabular-nums ${
-                error
-                  ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                  : 'border-gray-200 focus:border-orange-400 focus:ring-orange-100'
+                error ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                      : 'border-gray-200 focus:border-orange-400 focus:ring-orange-100'
               }`}
             />
           </div>
@@ -175,22 +197,14 @@ function EditCategoryRow({
 
       <td className="px-5 py-2.5">
         <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="p-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-50"
-            title="Save"
-          >
+          <button onClick={handleSave} disabled={saving}
+            className="p-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-50" title="Save">
             {saving
               ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <Check size={14} />
-            }
+              : <Check size={14} />}
           </button>
-          <button
-            onClick={onCancel}
-            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-            title="Cancel"
-          >
+          <button onClick={onCancel}
+            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Cancel">
             <X size={14} />
           </button>
         </div>
@@ -201,30 +215,28 @@ function EditCategoryRow({
 
 // ── Add row ────────────────────────────────────────────────────────────────────
 function AddCategoryRow({
-  salary,
-  onSave,
-  onCancel,
+  salary, onSave, onCancel,
 }: {
   salary: number;
   onSave: (name: string, budget: number) => Promise<void>;
   onCancel: () => void;
 }) {
-  const [name, setName] = useState('');
+  const [name,   setName]   = useState('');
   const [budget, setBudget] = useState('');
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [error,  setError]  = useState('');
   const nameRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { nameRef.current?.focus(); }, []);
 
   const budgetNum = parseFloat(budget) || 0;
-  const pct = salary > 0 && budgetNum > 0
+  const pct       = salary > 0 && budgetNum > 0
     ? Math.min(Math.round((budgetNum / salary) * 100), 100)
     : 0;
 
   const handleSave = async () => {
-    if (!name.trim()) { setError('Name is required'); return; }
-    if (salary > 0 && budgetNum > salary) { setError('Cannot exceed salary'); return; }
+    if (!name.trim())                      { setError('Name is required'); return; }
+    if (salary > 0 && budgetNum > salary)  { setError('Cannot exceed salary'); return; }
     setError('');
     setSaving(true);
     await onSave(name.trim(), budgetNum);
@@ -237,7 +249,7 @@ function AddCategoryRow({
   };
 
   return (
-    <tr className="border-b border-dashed border-orange-200 bg-orange-50/20">
+    <tr className="border-b border-dashed border-orange-200 border-l-4 border-l-orange-300 bg-orange-50/20">
       <td className="px-5 py-2.5">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg border-2 border-dashed border-orange-200 flex items-center justify-center flex-shrink-0">
@@ -245,8 +257,7 @@ function AddCategoryRow({
           </div>
           <input
             ref={nameRef}
-            type="text"
-            value={name}
+            type="text" value={name}
             onChange={(e) => { setName(e.target.value); setError(''); }}
             onKeyDown={handleKey}
             placeholder="Category name..."
@@ -260,12 +271,10 @@ function AddCategoryRow({
           <div className="relative w-40">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
             <input
-              type="number"
-              value={budget}
+              type="number" value={budget}
               onChange={(e) => { setBudget(e.target.value); setError(''); }}
               onKeyDown={handleKey}
-              min="0"
-              placeholder="0"
+              min="0" placeholder="0"
               className="text-sm text-gray-800 border border-gray-200 rounded-lg pl-9 pr-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full tabular-nums placeholder-gray-300"
             />
           </div>
@@ -285,22 +294,14 @@ function AddCategoryRow({
 
       <td className="px-5 py-2.5">
         <div className="flex items-center justify-end gap-1">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="p-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-50"
-            title="Add"
-          >
+          <button onClick={handleSave} disabled={saving}
+            className="p-1.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-white transition-colors disabled:opacity-50" title="Add">
             {saving
               ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              : <Check size={14} />
-            }
+              : <Check size={14} />}
           </button>
-          <button
-            onClick={onCancel}
-            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors"
-            title="Cancel"
-          >
+          <button onClick={onCancel}
+            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Cancel">
             <X size={14} />
           </button>
         </div>
@@ -311,35 +312,26 @@ function AddCategoryRow({
 
 // ── Table shell ────────────────────────────────────────────────────────────────
 interface CategoryTableProps {
-  categories: Category[];
-  editingId: number | null;
-  showAddRow: boolean;
+  categories:       Category[];
+  editingId:        number | null;
+  showAddRow:       boolean;
   budgetableSalary: number;
-  totalBudget: number;
-  totalSpent: number;
-  onEdit: (id: number) => void;
-  onCancelEdit: () => void;
-  onSaveEdit: (id: number, name: string, budget: number) => Promise<void>;
-  onDelete: (id: number) => void;
-  onAddSave: (name: string, budget: number) => Promise<void>;
-  onAddCancel: () => void;
-  onAddClick: () => void;
+  totalBudget:      number;
+  totalSpent:       number;
+  onEdit:           (id: number) => void;
+  onCancelEdit:     () => void;
+  onSaveEdit:       (id: number, name: string, budget: number) => Promise<void>;
+  onDelete:         (id: number) => void;
+  onAddSave:        (name: string, budget: number) => Promise<void>;
+  onAddCancel:      () => void;
+  onAddClick:       () => void;
 }
 
 export default function CategoryTable({
-  categories,
-  editingId,
-  showAddRow,
-  budgetableSalary,
-  totalBudget,
-  totalSpent,
-  onEdit,
-  onCancelEdit,
-  onSaveEdit,
-  onDelete,
-  onAddSave,
-  onAddCancel,
-  onAddClick,
+  categories, editingId, showAddRow, budgetableSalary,
+  totalBudget, totalSpent,
+  onEdit, onCancelEdit, onSaveEdit, onDelete,
+  onAddSave, onAddCancel, onAddClick,
 }: CategoryTableProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -378,35 +370,25 @@ export default function CategoryTable({
           {categories.map((cat) =>
             editingId === cat.category_id ? (
               <EditCategoryRow
-                key={cat.category_id}
-                cat={cat}
-                salary={budgetableSalary}
-                onSave={onSaveEdit}
-                onCancel={onCancelEdit}
+                key={cat.category_id} cat={cat} salary={budgetableSalary}
+                onSave={onSaveEdit} onCancel={onCancelEdit}
               />
             ) : (
               <CategoryRow
-                key={cat.category_id}
-                cat={cat}
-                salary={budgetableSalary}
-                onEdit={() => onEdit(cat.category_id)}
-                onDelete={onDelete}
+                key={cat.category_id} cat={cat} salary={budgetableSalary}
+                onEdit={() => onEdit(cat.category_id)} onDelete={onDelete}
               />
             )
           )}
 
           {showAddRow && (
-            <AddCategoryRow
-              salary={budgetableSalary}
-              onSave={onAddSave}
-              onCancel={onAddCancel}
-            />
+            <AddCategoryRow salary={budgetableSalary} onSave={onAddSave} onCancel={onAddCancel} />
           )}
         </tbody>
 
         {categories.length > 0 && (
           <tfoot>
-            <tr className="border-t border-gray-100 bg-gray-50/60">
+            <tr className="border-t-2 border-gray-100 bg-gray-50/60">
               <td className="px-5 py-3">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   Total ({categories.length})
@@ -421,7 +403,11 @@ export default function CategoryTable({
                 </span>
               </td>
               <td className="px-5 py-3 hidden md:table-cell">
-                <span className={`text-sm font-bold tabular-nums ${totalBudget - totalSpent < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${
+                  totalBudget - totalSpent < 0
+                    ? 'bg-red-100 text-red-600'
+                    : 'bg-emerald-100 text-emerald-700'
+                }`}>
                   {totalBudget - totalSpent < 0 ? '-' : ''}{formatNRs(Math.abs(totalBudget - totalSpent))}
                 </span>
               </td>

@@ -1,40 +1,41 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ArrowDownLeft, ArrowUpRight, MoreVertical, Pencil, Trash2, Calendar, CreditCard } from 'lucide-react';
+import {
+  ArrowDownLeft, ArrowUpRight, MoreVertical,
+  Pencil, Trash2, Calendar, CreditCard,
+} from 'lucide-react';
 import ConfirmDeleteModal from '@/components/modals/ConfirmDelete/ConfirmDeleteModal';
 
 interface Transaction {
-  expense_id: number;
-  description: string;
-  amount: number;
-  expense_date: string;
+  expense_id:     number;
+  description:    string;
+  amount:         number;
+  expense_date:   string;
   payment_method: string;
-  category_name: string | null;
-  category_id?: number | null;
-  type: 'expense' | 'income';
+  category_name:  string | null;
+  category_id?:   number | null;
+  type:           'expense' | 'income';
 }
 
 interface TransactionHistoryProps {
-  filtered: Transaction[];
-  isLoading: boolean;
-  categoryColors: Record<string, string>;
-  onEdit: (t: Transaction) => void;
-  onDelete: (id: number, type: 'expense' | 'income') => void;
+  filtered:        Transaction[];
+  isLoading:       boolean;
+  categoryColors:  Record<string, string>;
+  onEdit:          (t: Transaction) => void;
+  onDelete:        (id: number, type: 'expense' | 'income') => void;
 }
 
 function ThreeDotMenu({
-  transaction,
-  onEdit,
-  onDelete,
+  transaction, onEdit, onDelete,
 }: {
   transaction: Transaction;
   onEdit: (t: Transaction) => void;
   onDelete: (id: number, type: 'expense' | 'income') => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen]                 = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeleting, setIsDeleting]     = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const handleConfirmDelete = async () => {
@@ -94,14 +95,10 @@ function ThreeDotMenu({
 }
 
 export default function TransactionHistory({
-  filtered,
-  isLoading,
-  categoryColors,
-  onEdit,
-  onDelete,
+  filtered, isLoading, categoryColors, onEdit, onDelete,
 }: TransactionHistoryProps) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100">
@@ -127,7 +124,6 @@ export default function TransactionHistory({
         </div>
       ) : filtered.length === 0 ? (
 
-        /* Empty state */
         <div className="flex flex-col items-center justify-center py-14">
           <div className="w-10 h-10 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
             <ArrowDownLeft size={18} className="text-gray-400" />
@@ -138,63 +134,110 @@ export default function TransactionHistory({
 
       ) : (
 
-        /* Transaction rows — compact py-2.5 */
-        <div className="divide-y divide-gray-50">
-          {filtered.map((t) => {
-            const isIncome = t.type === 'income';
-            return (
-              <div
-                key={`${t.type}-${t.expense_id}`}
-                className="flex items-center justify-between px-5 py-2.5 hover:bg-gray-50 transition-colors"
-              >
-                {/* Left: icon + info */}
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <div className={`w-8 h-8 flex items-center justify-center rounded-lg flex-shrink-0 ${isIncome ? 'bg-green-50' : 'bg-red-50'}`}>
-                    {isIncome
-                      ? <ArrowUpRight size={15} className="text-green-600" />
-                      : <ArrowDownLeft size={15} className="text-red-600" />
-                    }
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-gray-800 truncate leading-tight">
-                      {t.description}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+        /* Proper table — matches reports page style */
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50/60">
+                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
+                  Description
+                </th>
+                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">
+                  Category
+                </th>
+                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 hidden md:table-cell">
+                  Date
+                </th>
+                <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">
+                  Method
+                </th>
+                <th className="text-right text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
+                  Amount
+                </th>
+                <th className="px-3 py-3 w-10" />
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-gray-50">
+              {filtered.map((t) => {
+                const isIncome = t.type === 'income';
+                return (
+                  <tr
+                    key={`${t.type}-${t.expense_id}`}
+                    className="hover:bg-gray-50/60 transition-colors"
+                  >
+                    {/* Description + type icon */}
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 ${
+                          isIncome ? 'bg-green-50' : 'bg-red-50'
+                        }`}>
+                          {isIncome
+                            ? <ArrowUpRight size={13} className="text-green-600" />
+                            : <ArrowDownLeft size={13} className="text-red-600" />
+                          }
+                        </div>
+                        <span className="text-sm font-medium text-gray-800 truncate max-w-[140px]">
+                          {t.description}
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Category badge */}
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       {t.category_name ? (
-                        <span className={`text-[11px] px-1.5 py-0.5 rounded font-medium ${categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'}`}>
+                        <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${
+                          categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'
+                        }`}>
                           {t.category_name}
                         </span>
                       ) : isIncome ? (
-                        <span className="text-[11px] px-1.5 py-0.5 rounded font-medium bg-green-100 text-green-700">
+                        <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-green-100 text-green-700">
                           Income
                         </span>
-                      ) : null}
-                      <span className="flex items-center gap-0.5 text-[11px] text-gray-400">
-                        <Calendar size={10} />
-                        {new Date(t.expense_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </span>
-                      {t.payment_method && (
-                        <span className="flex items-center gap-0.5 text-[11px] text-gray-400">
-                          <CreditCard size={10} />
-                          {t.payment_method}
-                        </span>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
                       )}
-                    </div>
-                  </div>
-                </div>
+                    </td>
 
-                {/* Right: amount + menu */}
-                <div className="flex items-center gap-2 flex-shrink-0 ml-3">
-                  <p className={`text-sm font-bold tabular-nums ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-                    {isIncome ? '+' : '-'}NRs {Number(t.amount).toLocaleString('en-IN')}
-                  </p>
-                  <ThreeDotMenu transaction={t} onEdit={onEdit} onDelete={onDelete} />
-                </div>
-              </div>
-            );
-          })}
+                    {/* Date */}
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <Calendar size={11} className="text-gray-300" />
+                        {new Date(t.expense_date).toLocaleDateString('en-US', {
+                          month: 'short', day: 'numeric', year: 'numeric',
+                        })}
+                      </span>
+                    </td>
+
+                    {/* Payment method */}
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                        <CreditCard size={11} className="text-gray-300" />
+                        {t.payment_method || '—'}
+                      </span>
+                    </td>
+
+                    {/* Amount */}
+                    <td className="px-5 py-3 text-right">
+                      <span className={`text-sm font-bold tabular-nums ${
+                        isIncome ? 'text-green-600' : 'text-red-500'
+                      }`}>
+                        {isIncome ? '+' : '-'}NRs {Number(t.amount).toLocaleString('en-IN')}
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-3 py-3">
+                      <ThreeDotMenu transaction={t} onEdit={onEdit} onDelete={onDelete} />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
-    )}
+      )}
     </div>
   );
 }
