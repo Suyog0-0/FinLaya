@@ -1,15 +1,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import { Plus, Tag } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import { Category } from '@/components/(user)/categories/utils';
 import MonthlySalaryBox from '@/components/(user)/categories/MonthlySalaryBox';
 import AllocationOverviewBox from '@/components/(user)/categories/AllocationOverviewBox';
-import CategoryCard from '@/components/(user)/categories/CategoryCard';
-import AddCategoryCard from '@/components/(user)/categories/AddCategoryCard';
+import CategoryTable from '@/components/(user)/categories/CategoryTable';
 
 export const dynamic = 'force-static';
 export const revalidate = 60;
@@ -25,11 +23,13 @@ export default function CategoriesMainContent() {
   const [salarySaved, setSalarySaved] = useState(false);
   const [salaryError, setSalaryError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [showAddCard, setShowAddCard] = useState(false);
+  const [showAddRow, setShowAddRow] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [trigger, setTrigger] = useState(0);
+
   const refetch = () => setTrigger((t) => t + 1);
 
-  // ── Fetch all data ──────────────────────────────────────────────────────────
+  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -38,12 +38,8 @@ export default function CategoriesMainContent() {
       setIsLoading(true);
 
       const now = new Date();
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-        .toISOString()
-        .split('T')[0];
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-        .toISOString()
-        .split('T')[0];
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+      const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
       const [catResult, expResult, userResult, emiResult] = await Promise.all([
         supabase
@@ -51,20 +47,17 @@ export default function CategoriesMainContent() {
           .select('category_id, category_name, allocation_percentage, budget_limit, current_balance')
           .eq('user_id', user.id)
           .order('created_at', { ascending: true }),
-
         supabase
           .from('expenses')
           .select('amount, category_id')
           .eq('user_id', user.id)
           .gte('expense_date', monthStart)
           .lte('expense_date', monthEnd),
-
         supabase
           .from('users')
           .select('monthly_salary')
           .eq('user_id', user.id)
           .maybeSingle(),
-
         supabase
           .from('emi_payments')
           .select('emi_amount')
@@ -74,38 +67,26 @@ export default function CategoriesMainContent() {
 
       if (cancelled) return;
 
-      const monthlySalary = userResult.data
-        ? Number(userResult.data.monthly_salary)
-        : 0;
-
-      // Sum all active EMI monthly amounts
-      const totalEMI = (emiResult.data || []).reduce(
-        (sum, e) => sum + Number(e.emi_amount),
-        0
-      );
+      const monthlySalary = userResult.data ? Number(userResult.data.monthly_salary) : 0;
+      const totalEMI = (emiResult.data || []).reduce((sum, e) => sum + Number(e.emi_amount), 0);
 
       const spentMap: Record<number, number> = {};
       (expResult.data || []).forEach((e) => {
-        if (e.category_id) {
-          spentMap[e.category_id] =
-            (spentMap[e.category_id] || 0) + Number(e.amount);
-        }
+        if (e.category_id) spentMap[e.category_id] = (spentMap[e.category_id] || 0) + Number(e.amount);
       });
 
       const cats: Category[] = (catResult.data || []).map((c) => ({
-        category_id: c.category_id,
-        category_name: c.category_name,
+        category_id:           c.category_id,
+        category_name:         c.category_name,
         allocation_percentage: Number(c.allocation_percentage),
-        budget_limit: Number(c.budget_limit),
-        current_balance: Number(c.current_balance),
-        spent: Math.round(spentMap[c.category_id] || 0),
+        budget_limit:          Number(c.budget_limit),
+        current_balance:       Number(c.current_balance),
+        spent:                 Math.round(spentMap[c.category_id] || 0),
       }));
 
       setSalary(monthlySalary);
       setEmiTotal(totalEMI);
-      setSalaryInput((prev) =>
-        prev === '' || prev === '0' ? String(monthlySalary || '') : prev
-      );
+      setSalaryInput((prev) => prev === '' || prev === '0' ? String(monthlySalary || '') : prev);
       setCategories(cats);
       setIsLoading(false);
     };
@@ -114,24 +95,20 @@ export default function CategoriesMainContent() {
     return () => { cancelled = true; };
   }, [user?.id, trigger]);
 
-  // Salary after EMIs — what's actually available for categories
   const budgetableSalary = Math.max(0, salary - emiTotal);
+  const totalBudget = categories.reduce((s, c) => s + c.budget_limit, 0);
+  const totalSpent  = categories.reduce((s, c) => s + c.spent, 0);
 
-  // ── Save salary ─────────────────────────────────────────────────────────────
+  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleSaveSalary = async () => {
     const val = parseFloat(salaryInput);
-    if (!val || val <= 0) {
-      setSalaryError('Please enter a valid salary');
-      return;
-    }
+    if (!val || val <= 0) { setSalaryError('Please enter a valid salary'); return; }
     setIsSalarySaving(true);
     setSalaryError('');
-
     const { error } = await supabase
       .from('users')
       .update({ monthly_salary: val, updated_at: new Date().toISOString() })
       .eq('user_id', user!.id);
-
     setIsSalarySaving(false);
     if (error) {
       setSalaryError('Failed to save. Try again.');
@@ -143,132 +120,74 @@ export default function CategoriesMainContent() {
     }
   };
 
-  // ── Add category ────────────────────────────────────────────────────────────
   const handleAddCategory = async (name: string, budget: number) => {
     if (!user?.id) return;
-    // Percentage is relative to budgetable salary (after EMIs)
     const pct = budgetableSalary > 0 ? Math.round((budget / budgetableSalary) * 100) : 0;
-
     const { error } = await supabase.from('budget_categories').insert({
-      user_id: user.id,
-      category_name: name,
+      user_id:               user.id,
+      category_name:         name,
       allocation_percentage: pct,
-      budget_limit: budget,
-      current_balance: budget,
+      budget_limit:          budget,
+      current_balance:       budget,
     });
-
-    if (!error) {
-      setShowAddCard(false);
-      refetch();
-    }
+    if (!error) { setShowAddRow(false); refetch(); }
   };
 
-  // ── Edit category ───────────────────────────────────────────────────────────
   const handleSaveEdit = async (id: number, name: string, budget: number) => {
     if (!user?.id) return;
-    // Percentage is relative to budgetable salary (after EMIs)
     const pct = budgetableSalary > 0 ? Math.round((budget / budgetableSalary) * 100) : 0;
-
     await supabase
       .from('budget_categories')
-      .update({
-        category_name: name,
-        budget_limit: budget,
-        allocation_percentage: pct,
-        updated_at: new Date().toISOString(),
-      })
+      .update({ category_name: name, budget_limit: budget, allocation_percentage: pct, updated_at: new Date().toISOString() })
       .eq('category_id', id)
       .eq('user_id', user.id);
-
+    setEditingId(null);
     refetch();
   };
 
-  // ── Delete category ─────────────────────────────────────────────────────────
   const handleDelete = async (id: number) => {
-    if (
-      !confirm(
-        'Delete this category? Expenses linked to it will become uncategorized.'
-      )
-    )
-      return;
+    if (!confirm('Delete this category? Expenses linked to it will become uncategorized.')) return;
     if (!user?.id) return;
-
-    await supabase
-      .from('expenses')
-      .update({ category_id: null })
-      .eq('category_id', id)
-      .eq('user_id', user.id);
-
-    await supabase
-      .from('budget_categories')
-      .delete()
-      .eq('category_id', id)
-      .eq('user_id', user.id);
-
+    await supabase.from('expenses').update({ category_id: null }).eq('category_id', id).eq('user_id', user.id);
+    await supabase.from('budget_categories').delete().eq('category_id', id).eq('user_id', user.id);
     refetch();
   };
 
-  // ── Derived totals ──────────────────────────────────────────────────────────
-  const totalBudget = categories.reduce((s, c) => s + c.budget_limit, 0);
-  const totalSpent = categories.reduce((s, c) => s + c.spent, 0);
-
-  // ── Loading skeleton ────────────────────────────────────────────────────────
+  // ── Loading ─────────────────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6 max-w-7xl mx-auto animate-pulse">
+      <div className="min-h-screen bg-gray-50 px-6 py-8 max-w-5xl mx-auto animate-pulse">
         <div className="h-8 w-56 bg-gray-200 rounded mb-2" />
         <div className="h-4 w-80 bg-gray-100 rounded mb-8" />
-        <div className="h-24 bg-gray-200 rounded-2xl mb-6" />
-        <div className="h-36 bg-gray-200 rounded-2xl mb-8" />
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="h-44 bg-gray-200 rounded-2xl" />
-          ))}
-        </div>
+        <div className="h-20 bg-gray-200 rounded-2xl mb-5" />
+        <div className="h-36 bg-gray-200 rounded-2xl mb-6" />
+        <div className="h-64 bg-gray-200 rounded-2xl" />
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* ── Page header ──────────────────────────────────────────────────── */}
-        <div className="flex items-start justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Budget Categories</h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Allocate your salary into different spending categories
-            </p>
-          </div>
-          <button
-            onClick={() => {
-              setShowAddCard(true);
-              window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-            }}
-            className="flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-semibold text-sm shadow-md transition-all"
-          >
-            <Plus size={16} />
-            Add Category
-          </button>
+        {/* Page header */}
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">Budget Categories</h1>
+          <p className="text-sm text-gray-500 mt-1">Allocate your salary into different spending categories</p>
         </div>
 
-        {/* ── Salary box ───────────────────────────────────────────────────── */}
+        {/* Salary box — unchanged */}
         <MonthlySalaryBox
           salaryInput={salaryInput}
           salary={salary}
           isSaving={isSalarySaving}
           isSaved={salarySaved}
           error={salaryError}
-          onChange={(val) => {
-            setSalaryInput(val);
-            setSalaryError('');
-            setSalarySaved(false);
-          }}
+          onChange={(val) => { setSalaryInput(val); setSalaryError(''); setSalarySaved(false); }}
           onSave={handleSaveSalary}
         />
 
-        {/* ── Allocation overview ───────────────────────────────────────────── */}
+        {/* Allocation overview — unchanged */}
         <AllocationOverviewBox
           salary={salary}
           emiTotal={emiTotal}
@@ -276,39 +195,39 @@ export default function CategoriesMainContent() {
           totalSpent={totalSpent}
         />
 
-        {/* ── Category grid ─────────────────────────────────────────────────── */}
-        {categories.length === 0 && !showAddCard ? (
-          <div className="text-center py-20 text-gray-400">
-            <Tag size={40} className="mx-auto mb-3 opacity-30" />
-            <p className="font-medium">No categories yet</p>
-            <p className="text-sm mt-1">
-              Click &quot;Add Category&quot; to get started
-            </p>
+        {/* Empty state */}
+        {categories.length === 0 && !showAddRow ? (
+          <div className="bg-white rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
+              <Tag size={20} className="text-orange-400" />
+            </div>
+            <p className="text-sm font-semibold text-gray-600 mb-1">No categories yet</p>
+            <p className="text-sm text-gray-400 mb-5">Click &quot;Add Category&quot; to get started</p>
+            <button
+              onClick={() => setShowAddRow(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-colors"
+            >
+              <Plus size={14} /> Add Category
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            <AnimatePresence>
-              {categories.map((cat) => (
-                <CategoryCard
-                  key={cat.category_id}
-                  cat={cat}
-                  salary={budgetableSalary}
-                  onDelete={handleDelete}
-                  onSaveEdit={handleSaveEdit}
-                />
-              ))}
-
-              {showAddCard && (
-                <AddCategoryCard
-                  key="add-card"
-                  salary={budgetableSalary}
-                  onSave={handleAddCategory}
-                  onCancel={() => setShowAddCard(false)}
-                />
-              )}
-            </AnimatePresence>
-          </div>
+          <CategoryTable
+            categories={categories}
+            editingId={editingId}
+            showAddRow={showAddRow}
+            budgetableSalary={budgetableSalary}
+            totalBudget={totalBudget}
+            totalSpent={totalSpent}
+            onEdit={(id) => { setEditingId(id); setShowAddRow(false); }}
+            onCancelEdit={() => setEditingId(null)}
+            onSaveEdit={handleSaveEdit}
+            onDelete={handleDelete}
+            onAddSave={handleAddCategory}
+            onAddCancel={() => setShowAddRow(false)}
+            onAddClick={() => { setShowAddRow(true); setEditingId(null); }}
+          />
         )}
+
       </div>
     </div>
   );
