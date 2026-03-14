@@ -181,9 +181,9 @@ export default function EMIFormModal({
                     <h2 className="text-base font-bold text-gray-900">
                       {existing ? 'Edit Loan' : 'Add New Loan'}
                     </h2>
-                    <p className="text-xs text-gray-400">
+                    {/* <p className="text-xs text-gray-400">
                       Fields marked <span className="text-red-400">*</span> are required
-                    </p>
+                    </p> */}
                   </div>
                 </div>
                 <button
