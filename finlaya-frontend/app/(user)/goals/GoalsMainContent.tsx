@@ -7,7 +7,7 @@ import {
   Plus, Trophy, Target, PiggyBank, Star, Trash2, CheckCircle2,
   Flame, CalendarDays, AlertCircle,
   Home, Car, Plane, GraduationCap, Dumbbell, Gift,
-  Smartphone, Coffee, Monitor, Heart, Music, Umbrella, Briefcase
+  Smartphone, Coffee, Monitor, Heart, Music, Umbrella, Briefcase,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
@@ -33,18 +33,21 @@ const ICON_MAP: Record<string, LucideIcon> = {
   heart: Heart, music: Music, umbrella: Umbrella, star: Star, briefcase: Briefcase,
 };
 
-const fmt = (n: number) => 'NRs ' + Math.max(0, n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+const fmt = (n: number) =>
+  'NRs ' + Math.max(0, n).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
-// ── Circular progress ring ──
-const ProgressRing = ({ percent, emoji, isComplete, size = 60 }: {
+// ── Circular progress ring ─────────────────────────────────────────────────────
+const ProgressRing = ({
+  percent, emoji, isComplete, size = 60,
+}: {
   percent: number; emoji: string; isComplete: boolean; size?: number;
 }) => {
   const stroke = 4;
-  const r = (size - stroke) / 2;
-  const circ = 2 * Math.PI * r;
+  const r      = (size - stroke) / 2;
+  const circ   = 2 * Math.PI * r;
   const offset = circ - (Math.min(percent, 100) / 100) * circ;
   const center = size / 2;
-  const Icon = ICON_MAP[emoji] || Target;
+  const Icon   = ICON_MAP[emoji] || Target;
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
@@ -70,36 +73,32 @@ const ProgressRing = ({ percent, emoji, isComplete, size = 60 }: {
   );
 };
 
-// ── Single goal card ──
+// ── Goal card ──────────────────────────────────────────────────────────────────
 const GoalCard = ({
-  goal, onDelete, onContribute
+  goal, onDelete, onContribute,
 }: {
   goal: Goal;
   onDelete: (id: string) => void;
   onContribute: (goal: Goal) => void;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const pct = goal.target_amount > 0 ? Math.min((goal.saved_amount / goal.target_amount) * 100, 100) : 0;
+  const pct        = goal.target_amount > 0 ? Math.min((goal.saved_amount / goal.target_amount) * 100, 100) : 0;
   const isComplete = goal.saved_amount >= goal.target_amount;
-  const remaining = Math.max(0, goal.target_amount - goal.saved_amount);
+  const remaining  = Math.max(0, goal.target_amount - goal.saved_amount);
 
   let daysLeft: number | null = null;
-  if (goal.deadline) {
+  if (goal.deadline)
     daysLeft = Math.max(0, Math.ceil((new Date(goal.deadline).getTime() - Date.now()) / 86400000));
-  }
 
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.97 }}
+      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.97 }}
       className={`bg-white rounded-2xl border p-4 shadow-sm hover:shadow-md transition-all group ${
         isComplete ? 'border-emerald-100 ring-1 ring-emerald-100' : 'border-gray-100'
       }`}
     >
       <div className="flex gap-3">
-        {/* Ring */}
         <div className="flex flex-col items-center gap-1">
           <ProgressRing percent={pct} emoji={goal.emoji} isComplete={isComplete} />
           <span className={`text-[10px] font-bold ${isComplete ? 'text-emerald-600' : 'text-orange-500'}`}>
@@ -107,7 +106,6 @@ const GoalCard = ({
           </span>
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="min-w-0">
@@ -124,7 +122,6 @@ const GoalCard = ({
               )}
             </div>
 
-            {/* Delete */}
             <div className="flex-shrink-0">
               {confirmDelete ? (
                 <div className="flex items-center gap-1 bg-red-50 border border-red-100 px-2 py-1 rounded-lg">
@@ -143,7 +140,6 @@ const GoalCard = ({
             </div>
           </div>
 
-          {/* Progress bar */}
           <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
             <motion.div
               className={`h-full rounded-full ${isComplete ? 'bg-emerald-400' : 'bg-orange-400'}`}
@@ -153,7 +149,6 @@ const GoalCard = ({
             />
           </div>
 
-          {/* Stats row */}
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
               <div>
@@ -166,7 +161,6 @@ const GoalCard = ({
               </div>
             </div>
 
-            {/* Right side: deadline + contribute button */}
             <div className="flex items-center gap-2">
               {goal.deadline && daysLeft !== null && !isComplete && (
                 <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
@@ -187,7 +181,6 @@ const GoalCard = ({
             </div>
           </div>
 
-          {/* Remaining pill */}
           {!isComplete && (
             <div className="mt-2">
               <span className="text-[10px] font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
@@ -201,7 +194,7 @@ const GoalCard = ({
   );
 };
 
-// ── Empty state ──
+// ── Empty state ────────────────────────────────────────────────────────────────
 const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
   <motion.div
     initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -221,16 +214,19 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
   </motion.div>
 );
 
-// ── Main component ──
+// ── Main component ─────────────────────────────────────────────────────────────
 export default function GoalsMainContent() {
   const { user } = useAuth();
-  const [goals, setGoals] = useState<Goal[]>([]);
+  const [goals, setGoals]       = useState<Goal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [contributeGoal, setContributeGoal] = useState<Goal | null>(null);
 
-  // Available savings = (monthly_salary + income entries) - expenses - goal savings
-  const [availableSavings, setAvailableSavings] = useState(0);
+  // The contribution cap passed to ContributeModal.
+  // Primary source: Savings category budget_limit.
+  // Fallback if no Savings category: salary - expenses - EMI (net spendable).
+  const [savingsLimit, setSavingsLimit]           = useState(0);
+  const [savingsLimitSource, setSavingsLimitSource] = useState<'category' | 'net'>('net');
 
   const fetchData = useCallback(async () => {
     if (!user?.id) return;
@@ -241,28 +237,44 @@ export default function GoalsMainContent() {
       { data: incomeData },
       { data: expenseData },
       { data: userData },
+      { data: emiData },
+      { data: categoryData },
     ] = await Promise.all([
       supabase.from('goals').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
       supabase.from('income').select('amount').eq('user_id', user.id),
       supabase.from('expenses').select('amount').eq('user_id', user.id),
       supabase.from('users').select('monthly_salary').eq('user_id', user.id).maybeSingle(),
+      supabase.from('emi_payments').select('emi_amount').eq('user_id', user.id).eq('is_active', true),
+      // Fetch all categories so we can find the "Savings" one
+      supabase.from('budget_categories').select('category_name, budget_limit').eq('user_id', user.id),
     ]);
 
-    const monthlySalary = Number(userData?.monthly_salary ?? 0);
-    const incomeTableSum = (incomeData ?? []).reduce((s, r) => s + Number(r.amount), 0);
-    const totalIncome = monthlySalary + incomeTableSum;
-    const totalExpenses = (expenseData ?? []).reduce((s, r) => s + Number(r.amount), 0);
-    const totalGoalSavings = (goalsData ?? []).reduce((s, g) => s + Number(g.saved_amount ?? 0), 0);
+    const monthlySalary  = Number(userData?.monthly_salary ?? 0);
+    const totalIncome    = monthlySalary + (incomeData ?? []).reduce((s, r) => s + Number(r.amount), 0);
+    const totalExpenses  = (expenseData ?? []).reduce((s, r) => s + Number(r.amount), 0);
+    const totalEMI       = (emiData     ?? []).reduce((s, r) => s + Number(r.emi_amount), 0);
 
-    // Available = what's left after expenses AND goal contributions
-    setAvailableSavings(Math.max(0, totalIncome - totalExpenses - totalGoalSavings));
+    // Look for a "Savings" category (case-insensitive)
+    const savingsCategory = (categoryData ?? []).find(
+      (c) => c.category_name.toLowerCase() === 'savings'
+    );
+
+    if (savingsCategory && Number(savingsCategory.budget_limit) > 0) {
+      // Primary: use the Savings category budget limit
+      setSavingsLimit(Number(savingsCategory.budget_limit));
+      setSavingsLimitSource('category');
+    } else {
+      // Fallback: net spendable (salary + income - expenses - EMI), min 0
+      setSavingsLimit(Math.max(0, totalIncome - totalExpenses - totalEMI));
+      setSavingsLimitSource('net');
+    }
+
     setGoals(goalsData ?? []);
     setIsLoading(false);
   }, [user?.id]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Add new goal
   const handleSaveGoal = async (goalData: {
     title: string;
     description: string;
@@ -281,7 +293,6 @@ export default function GoalsMainContent() {
     await fetchData();
   };
 
-  // Contribute to a goal
   const handleContribute = async (amount: number) => {
     if (!contributeGoal) return;
     const newSaved = Number(contributeGoal.saved_amount) + amount;
@@ -295,17 +306,16 @@ export default function GoalsMainContent() {
     await fetchData();
   };
 
-  // Delete goal
   const handleDelete = async (id: string) => {
     await supabase.from('goals').delete().eq('id', id).eq('user_id', user!.id);
-    setGoals(prev => prev.filter(g => g.id !== id));
+    setGoals((prev) => prev.filter((g) => g.id !== id));
     await fetchData();
   };
 
-  const activeGoals = goals.filter(g => Number(g.saved_amount) < Number(g.target_amount));
-  const completedGoals = goals.filter(g => Number(g.saved_amount) >= Number(g.target_amount));
-  const totalTarget = goals.reduce((s, g) => s + Number(g.target_amount), 0);
-  const totalSaved = goals.reduce((s, g) => s + Number(g.saved_amount), 0);
+  const activeGoals    = goals.filter((g) => Number(g.saved_amount) < Number(g.target_amount));
+  const completedGoals = goals.filter((g) => Number(g.saved_amount) >= Number(g.target_amount));
+  const totalTarget    = goals.reduce((s, g) => s + Number(g.target_amount), 0);
+  const totalSaved     = goals.reduce((s, g) => s + Number(g.saved_amount), 0);
 
   return (
     <div className="min-h-screen bg-gray-50 pb-16">
@@ -331,14 +341,18 @@ export default function GoalsMainContent() {
             </button>
           </div>
 
-          {/* Summary stats */}
           {goals.length > 0 && (
             <div className="grid grid-cols-4 gap-2">
               {[
-                { label: 'Available', value: fmt(availableSavings), icon: PiggyBank, color: 'emerald' },
-                { label: 'Saved in Goals', value: fmt(totalSaved), icon: Target, color: 'orange' },
-                { label: 'Total Target', value: fmt(totalTarget), icon: CalendarDays, color: 'blue' },
-                { label: 'Completed', value: `${completedGoals.length}/${goals.length}`, icon: Star, color: 'amber' },
+                {
+                  label: savingsLimitSource === 'category' ? 'Savings Budget' : 'Available',
+                  value: fmt(savingsLimit),
+                  icon: PiggyBank,
+                  color: 'emerald',
+                },
+                { label: 'Saved in Goals', value: fmt(totalSaved),     icon: Target,      color: 'orange' },
+                { label: 'Total Target',   value: fmt(totalTarget),    icon: CalendarDays, color: 'blue'   },
+                { label: 'Completed',      value: `${completedGoals.length}/${goals.length}`, icon: Star, color: 'amber' },
               ].map(({ label, value, icon: Icon, color }) => (
                 <div key={label} className={`bg-${color}-50 rounded-xl p-2.5 border border-${color}-100/50`}>
                   <div className="flex items-center gap-1 mb-1">
@@ -357,7 +371,7 @@ export default function GoalsMainContent() {
       <div className="max-w-3xl mx-auto px-4 mt-5">
         {isLoading ? (
           <div className="space-y-3">
-            {[1, 2].map(i => (
+            {[1, 2].map((i) => (
               <div key={i} className="bg-white rounded-2xl h-28 animate-pulse border border-gray-100" />
             ))}
           </div>
@@ -370,7 +384,7 @@ export default function GoalsMainContent() {
                 <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">In Progress</h2>
                 <AnimatePresence mode="popLayout">
                   <div className="space-y-3">
-                    {activeGoals.map(g => (
+                    {activeGoals.map((g) => (
                       <GoalCard key={g.id} goal={g} onDelete={handleDelete} onContribute={setContributeGoal} />
                     ))}
                   </div>
@@ -383,7 +397,7 @@ export default function GoalsMainContent() {
                   <Trophy size={11} className="text-amber-400" /> Achieved
                 </h2>
                 <div className="space-y-3">
-                  {completedGoals.map(g => (
+                  {completedGoals.map((g) => (
                     <GoalCard key={g.id} goal={g} onDelete={handleDelete} onContribute={setContributeGoal} />
                   ))}
                 </div>
@@ -393,7 +407,6 @@ export default function GoalsMainContent() {
         )}
       </div>
 
-      {/* Modals */}
       <AddGoalModal
         isOpen={isAddOpen}
         onClose={() => setIsAddOpen(false)}
@@ -407,7 +420,8 @@ export default function GoalsMainContent() {
           goalTitle={contributeGoal.title}
           targetAmount={Number(contributeGoal.target_amount)}
           savedAmount={Number(contributeGoal.saved_amount)}
-          availableSavings={availableSavings}
+          availableSavings={savingsLimit}
+          savingsSource={savingsLimitSource}
           onContribute={handleContribute}
         />
       )}
