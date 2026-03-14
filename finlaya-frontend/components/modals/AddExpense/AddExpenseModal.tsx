@@ -2,20 +2,20 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, TrendingDown, Info } from 'lucide-react';
+import { X, TrendingDown, Info, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
 
 interface Category {
-  category_id: number;
+  category_id:   number;
   category_name: string;
-  budget_limit: number;
-  already_spent: number; // total expenses already recorded for this category
+  budget_limit:  number;
+  already_spent: number;
 }
 
 interface AddExpenseModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen:    boolean;
+  onClose:   () => void;
   onSuccess: () => void;
 }
 
@@ -30,72 +30,56 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
   const [isLoading, setIsLoading]               = useState(false);
   const [error, setError]                       = useState('');
-  const [availableBalance, setAvailableBalance] = useState<number | null>(null);
+
+  // Net balance = salary + income - expenses - EMI
+  // Allowed to be negative — we warn but never block the expense.
+  const [netBalance, setNetBalance]           = useState<number | null>(null);
+  const [emiExceedsSalary, setEmiExceedsSalary] = useState(false);
 
   const categoryRef = useRef<HTMLDivElement>(null);
 
   const [form, setForm] = useState({
-    title: '',
-    amount: '',
-    date: new Date().toISOString().split('T')[0],
+    title:         '',
+    amount:        '',
+    date:          new Date().toISOString().split('T')[0],
     paymentMethod: 'Cash',
-    notes: '',
+    notes:         '',
   });
 
-  // Fetch everything needed when modal opens
+  // ── Fetch data when modal opens ────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id || !isOpen) return;
 
     const fetchData = async () => {
       const [catRes, userRes, expRes, incRes, emiRes] = await Promise.all([
-        // Fetch budget categories with their limits and current spending
-        supabase
-          .from('budget_categories')
-          .select('category_id, category_name, budget_limit')
-          .eq('user_id', user.id),
-        supabase
-          .from('users')
-          .select('monthly_salary')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-        supabase
-          .from('expenses')
-          .select('amount, category_id')
-          .eq('user_id', user.id),
-        supabase
-          .from('income')
-          .select('amount')
-          .eq('user_id', user.id),
-        supabase
-          .from('emi_payments')
-          .select('emi_amount')
-          .eq('user_id', user.id)
-          .eq('is_active', true),
+        supabase.from('budget_categories').select('category_id, category_name, budget_limit').eq('user_id', user.id),
+        supabase.from('users').select('monthly_salary').eq('user_id', user.id).maybeSingle(),
+        supabase.from('expenses').select('amount, category_id').eq('user_id', user.id),
+        supabase.from('income').select('amount').eq('user_id', user.id),
+        supabase.from('emi_payments').select('emi_amount').eq('user_id', user.id).eq('is_active', true),
       ]);
 
-      // Build a map of category_id → total spent
       const spentMap: Record<number, number> = {};
       for (const exp of expRes.data || []) {
-        if (exp.category_id) {
+        if (exp.category_id)
           spentMap[exp.category_id] = (spentMap[exp.category_id] || 0) + Number(exp.amount);
-        }
       }
 
-      const enrichedCategories: Category[] = (catRes.data || []).map((c) => ({
+      setCategories((catRes.data || []).map((c) => ({
         category_id:   c.category_id,
         category_name: c.category_name,
         budget_limit:  Number(c.budget_limit),
         already_spent: spentMap[c.category_id] || 0,
-      }));
+      })));
 
-      setCategories(enrichedCategories);
-
-      // Compute overall available balance
       const salary   = Number(userRes.data?.monthly_salary ?? 0);
-      const totalExp = (expRes.data || []).reduce((s, e) => s + Number(e.amount), 0);
-      const totalInc = (incRes.data || []).reduce((s, i) => s + Number(i.amount), 0);
-      const totalEMI = (emiRes.data || []).reduce((s, e) => s + Number(e.emi_amount), 0);
-      setAvailableBalance(Math.max(0, salary + totalInc - totalExp - totalEMI));
+      const totalInc = (incRes.data  || []).reduce((s, i) => s + Number(i.amount), 0);
+      const totalExp = (expRes.data  || []).reduce((s, e) => s + Number(e.amount), 0);
+      const totalEMI = (emiRes.data  || []).reduce((s, e) => s + Number(e.emi_amount), 0);
+
+      // Net balance — NOT clamped to 0. Negative means the user is in deficit.
+      setNetBalance(salary + totalInc - totalExp - totalEMI);
+      setEmiExceedsSalary(totalEMI > salary + totalInc);
     };
 
     fetchData();
@@ -104,9 +88,8 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
   // Close suggestions on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (categoryRef.current && !categoryRef.current.contains(e.target as Node)) {
+      if (categoryRef.current && !categoryRef.current.contains(e.target as Node))
         setShowSuggestions(false);
-      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
@@ -145,13 +128,8 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
       return;
     }
 
-    // Hard block: overall balance check
-    if (availableBalance !== null && expenseAmount > availableBalance) {
-      setError(
-        `This expense of NRs ${expenseAmount.toLocaleString('en-IN')} exceeds your available balance of NRs ${availableBalance.toLocaleString('en-IN')}.`
-      );
-      return;
-    }
+    // ✅ No hard balance block — expenses are always allowed.
+    // The user already saw the amber warning while typing.
 
     setIsLoading(true);
     setError('');
@@ -159,16 +137,15 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     try {
       let categoryId = selectedCategory?.category_id ?? null;
 
-      // Create new category if user typed one that doesn't exist
       if (categoryInput && !selectedCategory) {
         const { data: newCat, error: catError } = await supabase
           .from('budget_categories')
           .insert({
-            user_id: user.id,
-            category_name: categoryInput,
+            user_id:               user.id,
+            category_name:         categoryInput,
             allocation_percentage: 0,
-            budget_limit: 0,
-            current_balance: 0,
+            budget_limit:          0,
+            current_balance:       0,
           })
           .select('category_id')
           .single();
@@ -197,8 +174,11 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
         return;
       }
 
-      // Reset form
-      setForm({ title: '', amount: '', date: new Date().toISOString().split('T')[0], paymentMethod: 'Cash', notes: '' });
+      setForm({
+        title: '', amount: '',
+        date: new Date().toISOString().split('T')[0],
+        paymentMethod: 'Cash', notes: '',
+      });
       setCategoryInput('');
       setSelectedCategory(null);
       onSuccess();
@@ -211,19 +191,18 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     }
   };
 
-  const enteredAmount = parseFloat(form.amount) || 0;
+  const enteredAmount    = parseFloat(form.amount) || 0;
+  const isOverBalance    = netBalance !== null && enteredAmount > 0 && enteredAmount > netBalance;
+  const balanceIsNegative = netBalance !== null && netBalance < 0;
 
-  // Overall balance warning (live, as user types)
-  const isOverBalance = availableBalance !== null && enteredAmount > availableBalance && enteredAmount > 0;
-
-  // Per-category budget warning (soft — still allows submit)
+  // Per-category soft warning
   const categoryBudgetWarning = (() => {
     if (!selectedCategory || enteredAmount <= 0) return null;
     const { budget_limit, already_spent, category_name } = selectedCategory;
-    if (budget_limit <= 0) return null; // no budget set for this category
-    const projectedSpend = already_spent + enteredAmount;
-    if (projectedSpend > budget_limit) {
-      const over = projectedSpend - budget_limit;
+    if (budget_limit <= 0) return null;
+    const projected = already_spent + enteredAmount;
+    if (projected > budget_limit) {
+      const over = projected - budget_limit;
       return `This will exceed your ${category_name} budget by NRs ${over.toLocaleString('en-IN')} (budget: NRs ${budget_limit.toLocaleString('en-IN')}, spent so far: NRs ${already_spent.toLocaleString('en-IN')}).`;
     }
     return null;
@@ -255,15 +234,13 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   </div>
                   <div>
                     <h2 className="text-lg font-bold text-gray-900">Add Expense</h2>
-                    {availableBalance !== null ? (
+                    {netBalance !== null && (
                       <p className="text-xs text-gray-400">
-                        Available:{' '}
-                        <span className={`font-semibold ${availableBalance <= 0 ? 'text-red-500' : 'text-emerald-600'}`}>
-                          NRs {availableBalance.toLocaleString('en-IN')}
+                        Balance:{' '}
+                        <span className={`font-semibold ${balanceIsNegative ? 'text-red-500' : 'text-emerald-600'}`}>
+                          NRs {netBalance.toLocaleString('en-IN')}
                         </span>
                       </p>
-                    ) : (
-                      <p className="text-xs text-gray-400">Record a new transaction</p>
                     )}
                   </div>
                 </div>
@@ -273,7 +250,18 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
               </div>
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                {/* Hard error banner */}
+
+                {/* Persistent amber banner when EMI > income */}
+                {emiExceedsSalary && (
+                  <div className="flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+                    <AlertTriangle size={15} className="text-amber-500 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-amber-700 font-medium leading-relaxed">
+                      Your monthly EMI obligations exceed your income. You are in a deficit — expenses are still recorded normally.
+                    </p>
+                  </div>
+                )}
+
+                {/* Submit error */}
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                     {error}
@@ -299,16 +287,27 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                       type="number" name="amount" value={form.amount} onChange={handleChange}
                       placeholder="0.00" required min="0.01" step="0.01"
                       className={`w-full pl-14 pr-4 py-2.5 rounded-lg border text-gray-800 placeholder-gray-400 focus:ring-2 focus:border-transparent outline-none text-sm transition-colors ${
-                        isOverBalance ? 'border-red-300 focus:ring-red-300 bg-red-50' : 'border-gray-300 focus:ring-red-400'
+                        isOverBalance
+                          ? 'border-amber-300 focus:ring-amber-200 bg-amber-50/30'
+                          : 'border-gray-300 focus:ring-red-400'
                       }`}
                     />
                   </div>
-                  {/* Live overall balance warning */}
-                  {isOverBalance && availableBalance !== null && (
-                    <motion.p initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
-                      className="text-xs text-red-500 mt-1.5 font-medium">
-                      Exceeds available balance of NRs {availableBalance.toLocaleString('en-IN')}
-                    </motion.p>
+                  {/* Amber warning — over balance, but still allowed */}
+                  {isOverBalance && netBalance !== null && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
+                      className="flex items-center gap-1.5 mt-1.5"
+                    >
+                      <AlertTriangle size={12} className="text-amber-500 flex-shrink-0" />
+                      <p className="text-xs text-amber-600 font-medium">
+                        {balanceIsNegative
+                          ? `Already NRs ${Math.abs(netBalance).toLocaleString('en-IN')} over budget`
+                          : `Exceeds available balance of NRs ${netBalance.toLocaleString('en-IN')}`
+                        }
+                        {' '}— expense will still be recorded.
+                      </p>
+                    </motion.div>
                   )}
                 </div>
 
@@ -351,16 +350,14 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                     )}
                   </div>
 
-                  {/* Soft per-category budget warning — shown right below the category field */}
+                  {/* Per-category soft warning */}
                   {categoryBudgetWarning && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
                       className="flex items-start gap-2 mt-2 px-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg"
                     >
                       <Info size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-xs text-amber-700 font-medium leading-relaxed">
-                        {categoryBudgetWarning}
-                      </p>
+                      <p className="text-xs text-amber-700 font-medium leading-relaxed">{categoryBudgetWarning}</p>
                     </motion.div>
                   )}
                 </div>
