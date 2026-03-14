@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase/client';
-import { Users, Receipt, TrendingUp, Target, ArrowUpRight } from 'lucide-react';
+import { Users, Receipt, TrendingUp, Target } from 'lucide-react';
 
 interface Stats {
   totalUsers: number;
@@ -57,103 +57,102 @@ export default function AdminDashboardMainContent() {
   }, []);
 
   const statCards = [
-    { label: 'Total Users', value: stats.totalUsers, icon: Users, suffix: '' },
-    { label: 'Expenses Logged', value: stats.totalExpenses, icon: Receipt, suffix: '' },
-    { label: 'Income Entries', value: stats.totalIncome, icon: TrendingUp, suffix: '' },
-    { label: 'Goals Set', value: stats.totalGoals, icon: Target, suffix: '' },
+    { label: 'Total Users', value: stats.totalUsers, icon: Users, iconColor: 'text-orange-400', iconBg: 'bg-orange-500/10' },
+    { label: 'Expenses Logged', value: stats.totalExpenses, icon: Receipt, iconColor: 'text-red-400', iconBg: 'bg-red-500/10' },
+    { label: 'Income Entries', value: stats.totalIncome, icon: TrendingUp, iconColor: 'text-emerald-400', iconBg: 'bg-emerald-500/10' },
+    { label: 'Goals Set', value: stats.totalGoals, icon: Target, iconColor: 'text-amber-400', iconBg: 'bg-amber-500/10' },
   ];
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a]">
-      <div className="max-w-6xl mx-auto px-5 py-8">
+    <div className="min-h-screen bg-[#0d1117]">
+      <div className="max-w-6xl mx-auto px-6 py-8">
 
         {/* Page header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="text-white text-lg font-semibold tracking-tight">Overview</h1>
-            <p className="text-white/30 text-xs mt-0.5">{today}</p>
+            <h1 className="text-white text-xl font-bold tracking-tight">Overview</h1>
+            <p className="text-white/40 text-sm mt-1">{today}</p>
           </div>
-          <span className="text-[11px] font-mono text-white/20 border border-white/[0.06] px-2 py-1 rounded-md">
-            LIVE
+          <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-lg">
+            ● LIVE
           </span>
         </div>
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-          {statCards.map(({ label, value, icon: Icon }) => (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          {statCards.map(({ label, value, icon: Icon, iconColor, iconBg }) => (
             <div
               key={label}
-              className="bg-white/[0.03] border border-white/[0.06] rounded-xl p-4 hover:bg-white/[0.05] transition-colors"
+              className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-5 hover:bg-white/[0.06] hover:border-white/[0.12] transition-all"
             >
-              <div className="flex items-center justify-between mb-3">
-                <Icon size={13} className="text-white/30" />
-                <ArrowUpRight size={11} className="text-white/15" />
+              <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center mb-4`}>
+                <Icon size={18} className={iconColor} strokeWidth={2} />
               </div>
-              <p className="text-2xl font-semibold text-white tabular-nums">
-                {loading ? <span className="text-white/10">—</span> : value}
+              <p className="text-2xl font-bold text-white tabular-nums tracking-tight mb-1">
+                {loading ? <span className="text-white/20">—</span> : value}
               </p>
-              <p className="text-white/30 text-[11px] mt-1">{label}</p>
+              <p className="text-sm text-white/40">{label}</p>
             </div>
           ))}
         </div>
 
         {/* Recent users table */}
-        <div className="bg-white/[0.02] border border-white/[0.06] rounded-xl overflow-hidden">
+        <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl overflow-hidden">
 
           {/* Table header */}
-          <div className="px-5 py-3.5 border-b border-white/[0.06] flex items-center justify-between">
-            <h2 className="text-white/70 text-[13px] font-medium">Recent Users</h2>
-            <a href="/admin-users" className="text-white/30 text-[11px] hover:text-white/60 transition-colors">
+          <div className="px-6 py-4 border-b border-white/[0.08] flex items-center justify-between">
+            <h2 className="text-white font-semibold text-sm">Recent Users</h2>
+            <a href="/admin-users" className="text-white/40 text-xs hover:text-white/70 transition-colors font-medium">
               View all →
             </a>
           </div>
 
           {/* Column headers */}
-          <div className="px-5 py-2.5 grid grid-cols-12 border-b border-white/[0.04]">
-            <span className="col-span-4 text-[11px] text-white/20 uppercase tracking-wider font-medium">User</span>
-            <span className="col-span-4 text-[11px] text-white/20 uppercase tracking-wider font-medium hidden md:block">Email</span>
-            <span className="col-span-2 text-[11px] text-white/20 uppercase tracking-wider font-medium hidden lg:block">Salary</span>
-            <span className="col-span-2 text-[11px] text-white/20 uppercase tracking-wider font-medium text-right">Joined</span>
+          <div className="px-6 py-3 grid grid-cols-12 border-b border-white/[0.05]">
+            <span className="col-span-4 text-[11px] text-white/30 uppercase tracking-widest font-semibold">User</span>
+            <span className="col-span-4 text-[11px] text-white/30 uppercase tracking-widest font-semibold hidden md:block">Email</span>
+            <span className="col-span-2 text-[11px] text-white/30 uppercase tracking-widest font-semibold hidden lg:block">Salary</span>
+            <span className="col-span-2 text-[11px] text-white/30 uppercase tracking-widest font-semibold text-right">Joined</span>
           </div>
 
           {loading ? (
-            <div className="px-5 py-10 text-center text-white/20 text-sm">Loading...</div>
+            <div className="px-6 py-12 text-center text-white/25 text-sm">Loading...</div>
           ) : recentUsers.length === 0 ? (
-            <div className="px-5 py-10 text-center text-white/20 text-sm">No users yet</div>
+            <div className="px-6 py-12 text-center text-white/25 text-sm">No users yet</div>
           ) : (
             <div>
               {recentUsers.map((u, i) => (
                 <div
                   key={u.user_id}
-                  className={`px-5 py-3 grid grid-cols-12 items-center hover:bg-white/[0.02] transition-colors ${
-                    i !== recentUsers.length - 1 ? 'border-b border-white/[0.04]' : ''
+                  className={`px-6 py-3.5 grid grid-cols-12 items-center hover:bg-white/[0.03] transition-colors ${
+                    i !== recentUsers.length - 1 ? 'border-b border-white/[0.05]' : ''
                   }`}
                 >
                   {/* Username + avatar */}
-                  <div className="col-span-4 flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-white/[0.06] border border-white/[0.08] flex items-center justify-center text-white/50 text-[11px] font-semibold flex-shrink-0">
+                  <div className="col-span-4 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-orange-500/15 border border-orange-500/20 flex items-center justify-center text-orange-400 text-[11px] font-bold flex-shrink-0">
                       {u.username?.[0]?.toUpperCase() ?? '?'}
                     </div>
-                    <span className="text-white/70 text-[13px] font-medium truncate">{u.username ?? '—'}</span>
+                    <span className="text-white/80 text-sm font-medium truncate">{u.username ?? '—'}</span>
                   </div>
 
                   {/* Email */}
                   <div className="col-span-4 hidden md:block">
-                    <span className="text-white/35 text-[12px] truncate block">{u.email}</span>
+                    <span className="text-white/40 text-sm truncate block">{u.email}</span>
                   </div>
 
                   {/* Salary */}
                   <div className="col-span-2 hidden lg:block">
-                    <span className="text-white/35 text-[12px]">
+                    <span className="text-white/40 text-sm">
                       {u.monthly_salary ? `NRs ${u.monthly_salary.toLocaleString()}` : '—'}
                     </span>
                   </div>
 
                   {/* Date */}
                   <div className="col-span-2 text-right">
-                    <span className="text-white/25 text-[11px]">
+                    <span className="text-white/30 text-xs">
                       {new Date(u.registration_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </span>
                   </div>
