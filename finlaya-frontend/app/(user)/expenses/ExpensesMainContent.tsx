@@ -1,15 +1,15 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { ArrowUpRight, ArrowDownLeft, ChevronDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ChevronDown, RotateCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
-import AddExpenseModal     from '@/components/modals/AddExpense/AddExpenseModal';
-import AddIncomeModal      from '@/components/modals/AddIncome/AddIncomeModal';
+import AddExpenseModal      from '@/components/modals/AddExpense/AddExpenseModal';
+import AddIncomeModal       from '@/components/modals/AddIncome/AddIncomeModal';
 import EditTransactionModal from '@/components/modals/EditTransaction/EditTransactionModal';
-import StatsCard           from '@/components/(user)/shared/StatsCard';
-import TransactionHistory  from '@/components/(user)/expenses/TransactionHistory';
-import SearchFilter        from '@/components/(user)/expenses/SearchFilter';
+import StatsCard            from '@/components/(user)/shared/StatsCard';
+import TransactionHistory   from '@/components/(user)/expenses/TransactionHistory';
+import SearchFilter         from '@/components/(user)/expenses/SearchFilter';
 
 export const dynamic  = 'force-static';
 export const revalidate = 60;
@@ -26,12 +26,12 @@ interface Transaction {
 }
 
 interface ExpenseRecord {
-  expense_id:       number;
-  description:      string;
-  amount:           number;
-  expense_date:     string;
-  payment_method:   string;
-  category_id:      number | null;
+  expense_id:        number;
+  description:       string;
+  amount:            number;
+  expense_date:      string;
+  payment_method:    string;
+  category_id:       number | null;
   budget_categories: { category_name: string } | Array<{ category_name: string }> | null;
 }
 
@@ -79,15 +79,15 @@ export default function ExpensesMainContent() {
   const [selectedYear,  setSelectedYear]  = useState(now.getFullYear());
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - i);
 
-  const [transactions,        setTransactions]        = useState<Transaction[]>([]);
-  const [search,              setSearch]              = useState('');
-  const [selectedCategory,    setSelectedCategory]    = useState('All');
-  const [categories,          setCategories]          = useState<string[]>(['All']);
-  const [isExpenseModalOpen,  setIsExpenseModalOpen]  = useState(false);
-  const [isIncomeModalOpen,   setIsIncomeModalOpen]   = useState(false);
-  const [editingTransaction,  setEditingTransaction]  = useState<Transaction | null>(null);
-  const [isLoading,           setIsLoading]           = useState(true);
-  const [monthlySalary,       setMonthlySalary]       = useState(0);
+  const [transactions,       setTransactions]       = useState<Transaction[]>([]);
+  const [search,             setSearch]             = useState('');
+  const [selectedCategory,   setSelectedCategory]   = useState('All');
+  const [categories,         setCategories]         = useState<string[]>(['All']);
+  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [isIncomeModalOpen,  setIsIncomeModalOpen]  = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [isLoading,          setIsLoading]          = useState(true);
+  const [monthlySalary,      setMonthlySalary]      = useState(0);
 
   const fetchAll = useCallback(async () => {
     if (!user?.id) return;
@@ -177,6 +177,12 @@ export default function ExpensesMainContent() {
     fetchAll();
   };
 
+  // Reset filter to current month
+  const goToCurrentMonth = () => {
+    setSelectedMonth(now.getMonth());
+    setSelectedYear(now.getFullYear());
+  };
+
   const isCurrentMonth = selectedMonth === now.getMonth() && selectedYear === now.getFullYear();
   const periodLabel    = isCurrentMonth ? 'This month' : `${MONTHS[selectedMonth]} ${selectedYear}`;
 
@@ -192,6 +198,7 @@ export default function ExpensesMainContent() {
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
 
+              {/* Month dropdown */}
               <div className="relative">
                 <select
                   value={selectedMonth}
@@ -203,6 +210,7 @@ export default function ExpensesMainContent() {
                 <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
 
+              {/* Year dropdown */}
               <div className="relative">
                 <select
                   value={selectedYear}
@@ -213,6 +221,18 @@ export default function ExpensesMainContent() {
                 </select>
                 <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
+
+              {/* Today button — only shown when not on current month */}
+              {!isCurrentMonth && (
+                <button
+                  onClick={goToCurrentMonth}
+                  title="Go to current month"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 text-xs font-semibold border border-orange-100 transition-colors"
+                >
+                  <RotateCcw size={12} strokeWidth={2.5} />
+                  Today
+                </button>
+              )}
             </div>
 
             <div className="flex items-center gap-2 mt-2">
@@ -227,26 +247,23 @@ export default function ExpensesMainContent() {
             </div>
           </div>
 
-          {/* ── Action buttons ──────────────────────────────────────────────
-              Green  = Add Income  (ArrowUpRight  icon + "Add" label)
-              Red    = Add Expense (ArrowDownLeft icon + "Add" label)
-              Title tooltip tells the user exactly what each button does.    */}
+          {/* Action buttons — TrendingUp for income, TrendingDown for expense */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setIsIncomeModalOpen(true)}
               title="Add Income"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors shadow-sm"
             >
-              <ArrowUpRight size={15} strokeWidth={2.5} />
-              Add
+              <TrendingUp size={15} strokeWidth={2.5} />
+              Add Income
             </button>
             <button
               onClick={() => setIsExpenseModalOpen(true)}
               title="Add Expense"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors shadow-sm"
             >
-              <ArrowDownLeft size={15} strokeWidth={2.5} />
-              Add
+              <TrendingDown size={15} strokeWidth={2.5} />
+              Add Expense
             </button>
           </div>
         </div>

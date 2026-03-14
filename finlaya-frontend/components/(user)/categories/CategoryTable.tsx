@@ -5,26 +5,6 @@ import { Plus, Tag, Pencil, Trash2, Check, X, AlertCircle } from 'lucide-react';
 import { Category, getCategoryIcon, formatNRs } from './utils';
 import ProgressBar from './ProgressBar';
 
-// ── Color accent per category name ────────────────────────────────────────────
-// Returns a left-border color and a subtle row tint for visual variety.
-const ROW_ACCENTS: Record<string, { border: string; tint: string }> = {
-  Housing:        { border: 'border-l-yellow-400',  tint: 'bg-yellow-50/30'  },
-  Food:           { border: 'border-l-orange-400',  tint: 'bg-orange-50/30'  },
-  Transportation: { border: 'border-l-blue-400',    tint: 'bg-blue-50/20'    },
-  Transport:      { border: 'border-l-blue-400',    tint: 'bg-blue-50/20'    },
-  Utilities:      { border: 'border-l-gray-400',    tint: 'bg-gray-50/40'    },
-  Health:         { border: 'border-l-teal-400',    tint: 'bg-teal-50/20'    },
-  Entertainment:  { border: 'border-l-purple-400',  tint: 'bg-purple-50/20'  },
-  Savings:        { border: 'border-l-emerald-400', tint: 'bg-emerald-50/20' },
-  Others:         { border: 'border-l-gray-300',    tint: 'bg-gray-50/30'    },
-  Other:          { border: 'border-l-gray-300',    tint: 'bg-gray-50/30'    },
-};
-const DEFAULT_ACCENT = { border: 'border-l-indigo-400', tint: 'bg-indigo-50/20' };
-
-function getAccent(name: string) {
-  return ROW_ACCENTS[name] ?? DEFAULT_ACCENT;
-}
-
 // ── View row ───────────────────────────────────────────────────────────────────
 function CategoryRow({
   cat, salary, onEdit, onDelete,
@@ -33,7 +13,6 @@ function CategoryRow({
   onEdit: () => void; onDelete: (id: number) => void;
 }) {
   const { Icon, colorClass } = getCategoryIcon(cat.category_name);
-  const { border, tint }     = getAccent(cat.category_name);
   const remaining = cat.budget_limit - cat.spent;
   const isOver    = cat.spent > cat.budget_limit && cat.budget_limit > 0;
   const salaryPct = salary > 0
@@ -41,7 +20,7 @@ function CategoryRow({
     : cat.allocation_percentage;
 
   return (
-    <tr className={`border-b border-gray-50 border-l-4 ${border} ${tint} hover:brightness-[0.98] transition-all group`}>
+    <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-all group">
       {/* Category name + icon */}
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ArrowDownLeft, ArrowUpRight, MoreVertical,
   Pencil, Trash2, Calendar, CreditCard,
@@ -19,11 +20,11 @@ interface Transaction {
 }
 
 interface TransactionHistoryProps {
-  filtered:        Transaction[];
-  isLoading:       boolean;
-  categoryColors:  Record<string, string>;
-  onEdit:          (t: Transaction) => void;
-  onDelete:        (id: number, type: 'expense' | 'income') => void;
+  filtered:       Transaction[];
+  isLoading:      boolean;
+  categoryColors: Record<string, string>;
+  onEdit:         (t: Transaction) => void;
+  onDelete:       (id: number, type: 'expense' | 'income') => void;
 }
 
 function ThreeDotMenu({
@@ -33,10 +34,46 @@ function ThreeDotMenu({
   onEdit: (t: Transaction) => void;
   onDelete: (id: number, type: 'expense' | 'income') => void;
 }) {
-  const [open, setOpen]                 = useState(false);
+  const [open, setOpen]                       = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting]     = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [isDeleting, setIsDeleting]           = useState(false);
+  const [menuPos, setMenuPos]                 = useState({ top: 0, right: 0 });
+
+  const btnRef  = useRef<HTMLButtonElement>(null);
+  // Ref attached to the portal div so outside-click can check both
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close only when click is outside BOTH the trigger button AND the portal menu
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      const insideBtn  = btnRef.current?.contains(target);
+      const insideMenu = menuRef.current?.contains(target);
+      if (!insideBtn && !insideMenu) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // Close on scroll so menu doesn't float away from its button
+  useEffect(() => {
+    if (!open) return;
+    const handler = () => setOpen(false);
+    window.addEventListener('scroll', handler, true);
+    return () => window.removeEventListener('scroll', handler, true);
+  }, [open]);
+
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!btnRef.current) return;
+    const rect = btnRef.current.getBoundingClientRect();
+    setMenuPos({
+      top:   rect.bottom + window.scrollY + 4,
+      right: window.innerWidth - rect.right,
+    });
+    setOpen((v) => !v);
+  };
 
   const handleConfirmDelete = async () => {
     setIsDeleting(true);
@@ -45,28 +82,31 @@ function ThreeDotMenu({
     setShowDeleteModal(false);
   };
 
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
+        ref={btnRef}
         type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        onClick={handleOpen}
         className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all"
       >
         <MoreVertical size={14} />
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-8 z-20 w-36 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+      {open && createPortal(
+        <div
+          ref={menuRef}
+          style={{
+            position: 'absolute',
+            top:   menuPos.top,
+            right: menuPos.right,
+            zIndex: 9999,
+          }}
+          className="w-36 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden"
+        >
           <button
             type="button"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={() => { setOpen(false); onEdit(transaction); }}
             className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
           >
@@ -75,12 +115,14 @@ function ThreeDotMenu({
           <div className="h-px bg-gray-100 mx-3" />
           <button
             type="button"
+            onMouseDown={(e) => e.stopPropagation()}
             onClick={() => { setOpen(false); setShowDeleteModal(true); }}
             className="flex items-center gap-2 w-full px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
           >
             <Trash2 size={13} /> Delete
           </button>
-        </div>
+        </div>,
+        document.body
       )}
 
       <ConfirmDeleteModal
@@ -90,7 +132,7 @@ function ThreeDotMenu({
         message={`Are you sure you want to delete "${transaction.description}"?`}
         isDeleting={isDeleting}
       />
-    </div>
+    </>
   );
 }
 
@@ -123,7 +165,6 @@ export default function TransactionHistory({
           ))}
         </div>
       ) : filtered.length === 0 ? (
-
         <div className="flex flex-col items-center justify-center py-14">
           <div className="w-10 h-10 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
             <ArrowDownLeft size={18} className="text-gray-400" />
@@ -131,16 +172,13 @@ export default function TransactionHistory({
           <p className="text-gray-500 text-sm font-medium">No transactions found</p>
           <p className="text-gray-400 text-xs mt-1">Try a different month or category</p>
         </div>
-
       ) : (
-
-        /* Proper table — matches reports page style */
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/60">
                 <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3">
-                  Description
+                  Title
                 </th>
                 <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-4 py-3 hidden sm:table-cell">
                   Category
@@ -166,7 +204,6 @@ export default function TransactionHistory({
                     key={`${t.type}-${t.expense_id}`}
                     className="hover:bg-gray-50/60 transition-colors"
                   >
-                    {/* Description + type icon */}
                     <td className="px-5 py-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className={`w-7 h-7 flex items-center justify-center rounded-lg flex-shrink-0 ${
@@ -183,16 +220,13 @@ export default function TransactionHistory({
                       </div>
                     </td>
 
-                    {/* Category badge */}
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {t.category_name ? (
-                        <span className={`text-xs px-2 py-0.5 rounded-md font-medium ${
-                          categoryColors[t.category_name] || 'bg-gray-100 text-gray-600'
-                        }`}>
+                        <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-gray-100 text-gray-600">
                           {t.category_name}
                         </span>
                       ) : isIncome ? (
-                        <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-green-100 text-green-700">
+                        <span className="text-xs px-2 py-0.5 rounded-md font-medium bg-gray-100 text-gray-600">
                           Income
                         </span>
                       ) : (
@@ -200,7 +234,6 @@ export default function TransactionHistory({
                       )}
                     </td>
 
-                    {/* Date */}
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="flex items-center gap-1.5 text-xs text-gray-500">
                         <Calendar size={11} className="text-gray-300" />
@@ -210,7 +243,6 @@ export default function TransactionHistory({
                       </span>
                     </td>
 
-                    {/* Payment method */}
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="flex items-center gap-1.5 text-xs text-gray-500">
                         <CreditCard size={11} className="text-gray-300" />
@@ -218,7 +250,6 @@ export default function TransactionHistory({
                       </span>
                     </td>
 
-                    {/* Amount */}
                     <td className="px-5 py-3 text-right">
                       <span className={`text-sm font-bold tabular-nums ${
                         isIncome ? 'text-green-600' : 'text-red-500'
@@ -227,7 +258,6 @@ export default function TransactionHistory({
                       </span>
                     </td>
 
-                    {/* Actions */}
                     <td className="px-3 py-3">
                       <ThreeDotMenu transaction={t} onEdit={onEdit} onDelete={onDelete} />
                     </td>
