@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/contexts/AuthContext";
 import { supabase } from "@/lib/supabase/client";
 import {
   LayoutDashboard, Receipt, PieChart, Settings, LogOut, Menu, X,
-  User, ChevronDown, Target, CreditCard, BarChart2
+  User, ChevronDown, Target, CreditCard, BarChart2, PiggyBank
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationBell from "@/components/layout/NotificationBell";
@@ -19,6 +19,7 @@ const navLinks = [
   { href: "/categories", label: "Categories", icon: PieChart },
   { href: "/goals",      label: "Goals",      icon: Target },
   { href: "/emis",       label: "EMI/Loan",   icon: CreditCard },
+  { href: "/savings",    label: "Savings",    icon: PiggyBank },
   { href: "/reports",    label: "Reports",    icon: BarChart2 },
 ];
 
@@ -68,7 +69,7 @@ export default function Navbar() {
 
   useEffect(() => {
     if (!router || !user?.id) return;
-    ["/dashboard", "/expenses", "/categories", "/goals", "/emi-loan", "/reports", `/profile/${user.id}`, "/settings"]
+    ["/dashboard", "/expenses", "/categories", "/goals", "/emi-loan", "/reports", "/savings", `/profile/${user.id}`, "/settings"]
       .forEach((page) => router.prefetch(page));
   }, [router, user?.id]);
 
