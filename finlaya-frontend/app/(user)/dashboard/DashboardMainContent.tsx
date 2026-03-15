@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react'; 
+import { ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/contexts/AuthContext';
 import OnboardingModal from '@/components/modals/onboarding/OnboardingModal';
 import StatsCard from '@/components/(user)/shared/StatsCard';
@@ -13,81 +13,112 @@ import RecentTransactions from '@/components/(user)/dashboard/RecentTransactions
 import { supabase } from '@/lib/supabase/client';
 import { useFinancialData } from '@/lib/hooks/useFinancialData';
 
-export const dynamic = 'force-static';
+export const dynamic   = 'force-static';
 export const revalidate = 60;
+
+// ── Helper: current YYYY-MM string ────────────────────────────────────────────
+function currentMonthKey(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// ── Per-user localStorage keys ─────────────────────────────────────────────────
+// onboarding_month_{userId}  → last YYYY-MM the user completed / dismissed onboarding
+// onboarding_done_{userId}   → 'true' if user has ever completed initial setup
+const monthKey  = (uid: string) => `finlaya_onboarding_month_${uid}`;
+const doneKey   = (uid: string) => `finlaya_onboarding_done_${uid}`;
 
 export default function DashboardMainContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  const [showOnboarding,  setShowOnboarding]  = useState(false);
   const [isCheckingSetup, setIsCheckingSetup] = useState(true);
-  const [dataVersion, setDataVersion] = useState(0);
+  const [dataVersion,     setDataVersion]     = useState(0);
 
   const { monthlySalary, monthlyExpenses, savings, totalBalance, isLoading, refetch } =
     useFinancialData();
 
+  // Redirect if not logged in
   useEffect(() => {
-    if (!loading && !user) {
-      router.push('/login');
-    }
+    if (!loading && !user) router.push('/login');
   }, [user, loading, router]);
 
+  // ── Decide whether to show the onboarding modal ────────────────────────────
   useEffect(() => {
     const checkSetup = async () => {
       if (!user?.id) return;
 
-      // Per-user key so switching accounts always re-checks
-      const sessionKey = `finlaya_setup_dismissed_${user.id}`;
+      const thisMonth  = currentMonthKey();
+      const lastMonth  = localStorage.getItem(monthKey(user.id));
+      const everDone   = localStorage.getItem(doneKey(user.id)) === 'true';
 
-      if (sessionStorage.getItem(sessionKey) === 'true') {
+      // Case 1: User has never completed setup → always show
+      if (!everDone) {
+        try {
+          const [{ data: cats }, { data: userData }] = await Promise.all([
+            supabase
+              .from('budget_categories')
+              .select('category_id')
+              .eq('user_id', user.id)
+              .limit(1),
+            supabase
+              .from('users')
+              .select('monthly_salary')
+              .eq('user_id', user.id)
+              .maybeSingle(),
+          ]);
+
+          const hasCategories = (cats ?? []).length > 0;
+          const hasSalary     = userData?.monthly_salary && Number(userData.monthly_salary) > 0;
+
+          if (!hasCategories || !hasSalary) {
+            setShowOnboarding(true);
+          } else {
+            // DB already has data — mark as done so we don't check again
+            localStorage.setItem(doneKey(user.id),  'true');
+            localStorage.setItem(monthKey(user.id), thisMonth);
+          }
+        } catch {
+          setShowOnboarding(true);
+        }
         setIsCheckingSetup(false);
         return;
       }
 
-      try {
-        const { data: cats } = await supabase
-          .from('budget_categories')
-          .select('category_id')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        const hasCategories = (cats ?? []).length > 0;
-
-        const { data: userData } = await supabase
-          .from('users')
-          .select('monthly_salary')
-          .eq('user_id', user.id)
-          .single();
-
-        const hasSalary = userData?.monthly_salary && Number(userData.monthly_salary) > 0;
-
-        if (!hasCategories || !hasSalary) {
-          setShowOnboarding(true);
-        }
-      } catch {
+      // Case 2: User has completed setup before,
+      // but it's a new month → prompt to update monthly salary
+      if (lastMonth !== thisMonth) {
         setShowOnboarding(true);
-      } finally {
-        setIsCheckingSetup(false);
       }
+
+      setIsCheckingSetup(false);
     };
 
-    if (user) {
-      checkSetup();
-    }
+    if (user) checkSetup();
   }, [user]);
 
+  // ── Dismiss without completing (X button) ─────────────────────────────────
+  // Still mark this month as seen so it doesn't pop up again mid-month
   const handleDismiss = () => {
-    sessionStorage.setItem(`finlaya_setup_dismissed_${user!.id}`, 'true');
+    if (user?.id) {
+      localStorage.setItem(monthKey(user.id), currentMonthKey());
+    }
     setShowOnboarding(false);
   };
 
+  // ── Completed successfully ─────────────────────────────────────────────────
   const handleComplete = () => {
-    sessionStorage.setItem(`finlaya_setup_dismissed_${user!.id}`, 'true');
+    if (user?.id) {
+      localStorage.setItem(doneKey(user.id),  'true');
+      localStorage.setItem(monthKey(user.id), currentMonthKey());
+    }
     setShowOnboarding(false);
     refetch();
     setDataVersion((v) => v + 1);
   };
 
+  // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading || isCheckingSetup) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -123,12 +154,12 @@ export default function DashboardMainContent() {
     <>
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
+
           <div className="flex items-center justify-between mb-8">
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
               <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
             </div>
-
             <button
               onClick={() => router.push('/expenses')}
               className="group inline-flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-200/40 hover:shadow-amber-300/50 hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-gray-50 transition-all duration-200 cursor-pointer"
@@ -143,21 +174,22 @@ export default function DashboardMainContent() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatsCard statId="balance" totalBalance={totalBalance} isLoading={isLoading} />
-            <StatsCard statId="income" monthlySalary={monthlySalary} isLoading={isLoading} />
+            <StatsCard statId="balance"  totalBalance={totalBalance}       isLoading={isLoading} />
+            <StatsCard statId="income"   monthlySalary={monthlySalary}     isLoading={isLoading} />
             <StatsCard statId="expenses" monthlyExpenses={monthlyExpenses} isLoading={isLoading} />
-            <StatsCard statId="savings" savings={savings} isLoading={isLoading} />
+            <StatsCard statId="savings"  savings={savings}                 isLoading={isLoading} />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <SpendingTrendChart key={`trend-${dataVersion}`} />
-            <CategoryBreakdownChart key={`cat-${dataVersion}`} />
+            <SpendingTrendChart      key={`trend-${dataVersion}`} />
+            <CategoryBreakdownChart  key={`cat-${dataVersion}`}   />
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <BudgetStatus key={`budget-${dataVersion}`} />
-            <RecentTransactions key={`recent-${dataVersion}`} />
+            <BudgetStatus       key={`budget-${dataVersion}`}  />
+            <RecentTransactions key={`recent-${dataVersion}`}  />
           </div>
+
         </div>
       </div>
 
