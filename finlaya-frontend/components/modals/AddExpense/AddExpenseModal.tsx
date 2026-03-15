@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, TrendingDown, Info, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useNotifications } from '@/lib/contexts/NotificationContext';
 
 interface Category {
   category_id:   number;
@@ -23,18 +24,16 @@ const paymentMethods = ['Cash', 'Mobile Payment (eSewa/Khalti)'];
 
 export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpenseModalProps) {
   const { user } = useAuth();
+  const { refresh } = useNotifications();
 
-  const [categories, setCategories]             = useState<Category[]>([]);
-  const [categoryInput, setCategoryInput]       = useState('');
-  const [showSuggestions, setShowSuggestions]   = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
-  const [isLoading, setIsLoading]               = useState(false);
-  const [error, setError]                       = useState('');
-
-  // Net balance = salary + income - expenses - EMI
-  // Allowed to be negative — we warn but never block the expense.
-  const [netBalance, setNetBalance]           = useState<number | null>(null);
-  const [emiExceedsSalary, setEmiExceedsSalary] = useState(false);
+  const [categories,         setCategories]         = useState<Category[]>([]);
+  const [categoryInput,      setCategoryInput]       = useState('');
+  const [showSuggestions,    setShowSuggestions]     = useState(false);
+  const [selectedCategory,   setSelectedCategory]    = useState<Category | null>(null);
+  const [isLoading,          setIsLoading]           = useState(false);
+  const [error,              setError]               = useState('');
+  const [netBalance,         setNetBalance]          = useState<number | null>(null);
+  const [emiExceedsSalary,   setEmiExceedsSalary]    = useState(false);
 
   const categoryRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +45,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     notes:         '',
   });
 
-  // ── Fetch data when modal opens ────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id || !isOpen) return;
 
@@ -77,7 +75,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
       const totalExp = (expRes.data  || []).reduce((s, e) => s + Number(e.amount), 0);
       const totalEMI = (emiRes.data  || []).reduce((s, e) => s + Number(e.emi_amount), 0);
 
-      // Net balance — NOT clamped to 0. Negative means the user is in deficit.
       setNetBalance(salary + totalInc - totalExp - totalEMI);
       setEmiExceedsSalary(totalEMI > salary + totalInc);
     };
@@ -85,7 +82,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     fetchData();
   }, [user?.id, isOpen]);
 
-  // Close suggestions on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (categoryRef.current && !categoryRef.current.contains(e.target as Node))
@@ -127,9 +123,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
       setError('Please enter a valid amount greater than 0.');
       return;
     }
-
-    // ✅ No hard balance block — expenses are always allowed.
-    // The user already saw the amber warning while typing.
 
     setIsLoading(true);
     setError('');
@@ -174,6 +167,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
         return;
       }
 
+      // Reset form
       setForm({
         title: '', amount: '',
         date: new Date().toISOString().split('T')[0],
@@ -181,8 +175,14 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
       });
       setCategoryInput('');
       setSelectedCategory(null);
+
+      // Notify parent and close modal
       onSuccess();
       onClose();
+
+      // Re-check budget alerts immediately after expense is saved
+      await refresh();
+
     } catch (err) {
       console.error('[AddExpenseModal]', err);
       setError('Unexpected error occurred. Please try again.');
@@ -191,11 +191,10 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     }
   };
 
-  const enteredAmount    = parseFloat(form.amount) || 0;
-  const isOverBalance    = netBalance !== null && enteredAmount > 0 && enteredAmount > netBalance;
+  const enteredAmount     = parseFloat(form.amount) || 0;
+  const isOverBalance     = netBalance !== null && enteredAmount > 0 && enteredAmount > netBalance;
   const balanceIsNegative = netBalance !== null && netBalance < 0;
 
-  // Per-category soft warning
   const categoryBudgetWarning = (() => {
     if (!selectedCategory || enteredAmount <= 0) return null;
     const { budget_limit, already_spent, category_name } = selectedCategory;
@@ -251,17 +250,15 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
 
               <form onSubmit={handleSubmit} className="p-6 space-y-4">
 
-                {/* Persistent amber banner when EMI > income */}
                 {emiExceedsSalary && (
                   <div className="flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
                     <AlertTriangle size={15} className="text-amber-500 mt-0.5 flex-shrink-0" />
                     <p className="text-xs text-amber-700 font-medium leading-relaxed">
-                      Your monthly EMI obligations exceed your income. You are in a deficit — expenses are still recorded normally.
+                      Your monthly EMI obligations exceed your income. You are in a deficit.
                     </p>
                   </div>
                 )}
 
-                {/* Submit error */}
                 {error && (
                   <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg text-sm">
                     {error}
@@ -287,13 +284,10 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                       type="number" name="amount" value={form.amount} onChange={handleChange}
                       placeholder="0.00" required min="0.01" step="0.01"
                       className={`w-full pl-14 pr-4 py-2.5 rounded-lg border text-gray-800 placeholder-gray-400 focus:ring-2 focus:border-transparent outline-none text-sm transition-colors ${
-                        isOverBalance
-                          ? 'border-amber-300 focus:ring-amber-200 bg-amber-50/30'
-                          : 'border-gray-300 focus:ring-red-400'
+                        isOverBalance ? 'border-amber-300 focus:ring-amber-200 bg-amber-50/30' : 'border-gray-300 focus:ring-red-400'
                       }`}
                     />
                   </div>
-                  {/* Amber warning — over balance, but still allowed */}
                   {isOverBalance && netBalance !== null && (
                     <motion.div
                       initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }}
@@ -304,8 +298,7 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                         {balanceIsNegative
                           ? `Already NRs ${Math.abs(netBalance).toLocaleString('en-IN')} over budget`
                           : `Exceeds available balance of NRs ${netBalance.toLocaleString('en-IN')}`
-                        }
-                        {' '}— expense will still be recorded.
+                        } - expense will still be recorded.
                       </p>
                     </motion.div>
                   )}
@@ -349,8 +342,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                       </div>
                     )}
                   </div>
-
-                  {/* Per-category soft warning */}
                   {categoryBudgetWarning && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
