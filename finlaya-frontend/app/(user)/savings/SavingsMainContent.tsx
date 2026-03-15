@@ -229,8 +229,8 @@ export default function SavingsMainContent() {
       .sort((a, b) => b.available - a.available);
 
     setCategories(cats);
-    // Auto-select only categories that still have something to lock
-    setSelectedIds(new Set(cats.filter(c => c.available > 0).map(c => c.id)));
+    // Start with nothing selected — user picks manually
+    setSelectedIds(new Set());
     setPastRecords(allRecords);
     setIsLoading(false);
   }, [user?.id]);
