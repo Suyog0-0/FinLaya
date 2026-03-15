@@ -14,6 +14,7 @@ export interface AppNotification {
   is_read:    boolean;
   severity:   NotificationSeverity;
   created_at: string;
+  link?:      string;
 }
 
 interface NotificationContextType {
