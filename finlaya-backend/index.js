@@ -14,12 +14,10 @@ const app = express();
 // Middleware
 app.use(cors({
   origin: (origin, callback) => {
-    // Strip trailing slash from env value and incoming origin before comparing
     const allowed = (process.env.CORS_ORIGINS || 'http://localhost:3000')
       .split(',')
       .map(o => o.trim().replace(/\/$/, ''));
 
-    // Allow requests with no origin (Postman, server-to-server)
     if (!origin) return callback(null, true);
 
     if (allowed.includes(origin.replace(/\/$/, ''))) {
@@ -30,9 +28,6 @@ app.use(cors({
   },
   credentials: true,
 }));
-
-
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -49,8 +44,8 @@ try {
 
 // Health check route
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'ok', 
+  res.json({
+    status: 'ok',
     message: 'FinLaya API is running',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
@@ -61,37 +56,36 @@ app.get('/health', (req, res) => {
 const authRoutes = require('./routes/auth');
 app.use('/auth', authRoutes);
 
-//Admin Routes
+// Admin routes
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
-
-// Test route to verify server is working
+// Test route
 app.get('/', (req, res) => {
   res.json({
     message: 'FinLaya Backend API',
     version: '1.0.0',
     endpoints: {
-      health: '/health',
-      docs: '/api-docs',
-      login: 'POST /auth/login',
-      register: 'POST /auth/register'
+      health:   '/health',
+      docs:     '/api-docs',
+      login:    'POST /auth/login',
+      register: 'POST /auth/register',
     }
   });
 });
 
 // 404 handler
 app.use((req, res) => {
-  res.status(404).json({ 
+  res.status(404).json({
     error: 'Route not found',
-    path: req.path 
+    path: req.path
   });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
   console.error('Error:', err);
-  res.status(500).json({ 
+  res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
@@ -110,6 +104,11 @@ app.listen(PORT, () => {
   console.log(`✓ Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log('');
+
+  // ── Start report scheduler ───────────────────────────────────────────────
+  const { startReportScheduler } = require('./jobs/reportScheduler');
+  startReportScheduler();
+
   console.log('Press CTRL+C to stop the server');
   console.log('');
 });
