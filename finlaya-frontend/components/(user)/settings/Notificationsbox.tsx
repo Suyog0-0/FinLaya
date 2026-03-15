@@ -26,25 +26,25 @@ export default function NotificationsBox() {
     {
       key:   'budget_alerts' as const,
       label: 'Budget Alerts',
-      desc:  'Get notified when spending reaches 90% of a budget',
+      desc:  'Get notified when spending reaches 80% or 90% of a budget',
       icon:  AlertTriangle,
     },
     {
       key:   'weekly_reports' as const,
       label: 'Weekly Reports',
-      desc:  'Receive weekly spending summaries (email — coming soon)',
+      desc:  'Spending summary emailed every Monday + shown in notifications',
       icon:  FileText,
     },
     {
       key:   'monthly_reports' as const,
       label: 'Monthly Reports',
-      desc:  'Get detailed monthly financial reports (email — coming soon)',
+      desc:  'Full monthly breakdown emailed on the 1st + shown in notifications',
       icon:  Calendar,
     },
     {
       key:   'bill_reminders' as const,
       label: 'Bill Reminders',
-      desc:  'In-app reminders 3 days and 1 day before EMI due dates',
+      desc:  'Reminders 3 days and 1 day before EMI due dates',
       icon:  CreditCard,
     },
   ];
