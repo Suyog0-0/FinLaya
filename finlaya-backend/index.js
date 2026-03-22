@@ -60,6 +60,9 @@ app.use('/auth', authRoutes);
 const adminRoutes = require('./routes/admin');
 app.use('/api/admin', adminRoutes);
 
+const budgetAlertRoutes = require('./routes/budgetAlerts');
+app.use('/api/budget-alerts', budgetAlertRoutes);
+
 // Test route
 app.get('/', (req, res) => {
   res.json({

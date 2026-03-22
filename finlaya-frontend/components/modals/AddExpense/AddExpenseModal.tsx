@@ -114,6 +114,28 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     if (e.target.name === 'amount') setError('');
   };
 
+  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+
+  // Calls the backend to check budgets and send email if threshold crossed.
+  // Fire-and-forget — we don't await this, so the modal closes instantly.
+  const triggerBudgetAlertCheck = () => {
+    supabase.auth.getSession().then(({ data }) => {
+      const token = data?.session?.access_token;
+      if (!token) return;
+
+      fetch(`${BACKEND_URL}/api/budget-alerts/check`, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      }).catch((err) => {
+        // Silently ignore — alert email is best-effort
+        console.warn('[AddExpenseModal] budget alert check failed:', err.message);
+      });
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
@@ -180,8 +202,11 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
       onSuccess();
       onClose();
 
-      // Re-check budget alerts immediately after expense is saved
+      // Re-check budget alerts in the bell icon
       await refresh();
+
+      // Also trigger backend to send email alert if threshold crossed
+      triggerBudgetAlertCheck();
 
     } catch (err) {
       console.error('[AddExpenseModal]', err);

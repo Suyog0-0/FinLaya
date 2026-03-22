@@ -106,7 +106,7 @@ const statBox = (label, value, valueColor, bgColor, borderColor) => `
   </td>
 `;
 
-// ── Main email builder ─────────────────────────────────────────────────────────
+// ── Main report email builder ──────────────────────────────────────────────────
 function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
   const {
     totalIncome, totalExpenses,
@@ -120,7 +120,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     day: '2-digit', month: 'long', year: 'numeric'
   });
 
-  // ── Income section ──────────────────────────────────────────────────────────
   const incomeSection = `
     ${sectionHeading('Income')}
     <tr><td colspan="10">
@@ -141,7 +140,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td></tr>
   `;
 
-  // ── Expenses section ────────────────────────────────────────────────────────
   const expensesSection = `
     ${sectionHeading('Expenses')}
     <tr><td colspan="10">
@@ -162,7 +160,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td></tr>
   `;
 
-  // ── Category breakdown ──────────────────────────────────────────────────────
   const catsWithData = (categoryBreakdown || []).filter(c => c.spent > 0 || c.budget > 0);
   const categorySection = `
     ${sectionHeading('Category Breakdown')}
@@ -199,7 +196,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td></tr>
   `;
 
-  // ── EMI section ─────────────────────────────────────────────────────────────
   const emiSection = `
     ${sectionHeading('EMI / Loan Details')}
     <tr><td colspan="10">
@@ -228,7 +224,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td></tr>
   `;
 
-  // ── Goals section ────────────────────────────────────────────────────────────
   const goalsSection = `
     ${sectionHeading('Savings &amp; Goals')}
     <tr><td colspan="10">
@@ -277,13 +272,11 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
        style="background:#ffffff; border-radius:12px; overflow:hidden;
               box-shadow:0 1px 6px rgba(0,0,0,0.07);">
 
-  <!-- ── HEADER ── -->
   <tr>
     <td style="background:#111827; padding:28px 32px 24px;">
       <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
           <td>
-            <!-- Logo row -->
             <table cellpadding="0" cellspacing="0">
               <tr>
                 <td style="background:#f97316; border-radius:6px;
@@ -297,7 +290,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
                 </td>
               </tr>
             </table>
-            <!-- Report type + period -->
             <p style="margin:14px 0 0; font-size:13px; color:#9ca3af; font-weight:400;">
               ${isWeekly ? 'Weekly' : 'Monthly'} Financial Report
               &nbsp;&#183;&nbsp;
@@ -312,12 +304,10 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td>
   </tr>
 
-  <!-- ── ORANGE ACCENT LINE ── -->
   <tr>
     <td style="height:3px; background:linear-gradient(90deg, #f97316, #fb923c, #fdba74);"></td>
   </tr>
 
-  <!-- ── GREETING ── -->
   <tr>
     <td style="padding:24px 32px 0;">
       <p style="margin:0; font-size:14px; color:#374151; line-height:1.6;">
@@ -328,7 +318,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td>
   </tr>
 
-  <!-- ── STAT BOXES: Monthly Income | Income | Expenses | Active EMIs ── -->
   <tr>
     <td style="padding:20px 32px 0;">
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -350,7 +339,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td>
   </tr>
 
-  <!-- ── TOP CATEGORY CALLOUT (no emoji) ── -->
   ${topCategory ? `
   <tr>
     <td style="padding:16px 32px 0;">
@@ -374,7 +362,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td>
   </tr>` : ''}
 
-  <!-- ── DETAILED SECTIONS ── -->
   <tr>
     <td style="padding:0 32px 8px;">
       <table width="100%" cellpadding="0" cellspacing="0">
@@ -387,7 +374,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td>
   </tr>
 
-  <!-- ── CTA BUTTON ── -->
   <tr>
     <td style="padding:8px 32px 28px; text-align:center;">
       <a href="${reportsUrl}"
@@ -400,7 +386,6 @@ function buildEmailHTML({ userName, reportType, period, summary, appUrl }) {
     </td>
   </tr>
 
-  <!-- ── FOOTER ── -->
   <tr>
     <td style="background:#f9fafb; padding:16px 32px; border-top:1px solid #e5e7eb;">
       <p style="margin:0; font-size:11px; color:#9ca3af; text-align:center; line-height:1.7;">
@@ -434,4 +419,208 @@ async function sendReportEmail({ toEmail, userName, reportType, period, summary,
   });
 }
 
-module.exports = { sendReportEmail };
+// ── Budget Alert Email ─────────────────────────────────────────────────────────
+
+function buildBudgetAlertEmailHTML({ userName, alerts }) {
+  const generatedOn = new Date().toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'long', year: 'numeric',
+  });
+
+  const alertRows = alerts.map((alert, i) => {
+    const isOver     = alert.spent >= alert.budget;
+    const pct        = Math.round((alert.spent / alert.budget) * 100);
+    const barColor   = isOver ? '#ef4444' : pct >= 90 ? '#f97316' : '#eab308';
+    const clamped    = Math.min(pct, 100);
+    const statusText = isOver
+      ? 'Over budget'
+      : pct >= 90
+      ? 'Almost at limit'
+      : 'Approaching limit';
+
+    return `
+      <tr style="background:${i % 2 === 1 ? '#f9fafb' : '#ffffff'};">
+        <td style="padding:12px 16px; font-size:13px; font-weight:600;
+                   color:#111827; border-bottom:1px solid #f3f4f6;">
+          ${alert.categoryName}
+        </td>
+        <td style="padding:12px 16px; font-size:13px; color:#374151;
+                   text-align:right; border-bottom:1px solid #f3f4f6;">
+          NRs ${Math.round(alert.budget).toLocaleString('en-IN')}
+        </td>
+        <td style="padding:12px 16px; font-size:13px;
+                   color:${isOver ? '#dc2626' : '#374151'};
+                   font-weight:${isOver ? '700' : '400'};
+                   text-align:right; border-bottom:1px solid #f3f4f6;">
+          NRs ${Math.round(alert.spent).toLocaleString('en-IN')}
+        </td>
+        <td style="padding:12px 16px; border-bottom:1px solid #f3f4f6; min-width:120px;">
+          <span style="font-size:12px; font-weight:700; color:${barColor};">${pct}%</span>
+          <div style="height:4px; background:#f1f5f9; border-radius:2px; margin-top:4px;">
+            <div style="height:4px; width:${clamped}%; background:${barColor}; border-radius:2px;"></div>
+          </div>
+          <span style="font-size:11px; color:#6b7280; margin-top:4px; display:block;">
+            ${statusText}
+          </span>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  const hasCritical = alerts.some((a) => a.severity === 'critical');
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>FinLaya Budget Alert</title>
+</head>
+<body style="margin:0; padding:0; background:#f1f5f9;
+             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9; padding:32px 16px;">
+<tr><td align="center">
+<table width="620" cellpadding="0" cellspacing="0"
+       style="background:#ffffff; border-radius:12px; overflow:hidden;
+              box-shadow:0 1px 6px rgba(0,0,0,0.07);">
+
+  <!-- HEADER -->
+  <tr>
+    <td style="background:#111827; padding:28px 32px 24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td>
+            <table cellpadding="0" cellspacing="0">
+              <tr>
+                <td style="background:#f97316; border-radius:6px;
+                           width:32px; height:32px; text-align:center; vertical-align:middle;">
+                  <span style="font-size:16px; font-weight:900; color:#ffffff;
+                               line-height:32px; display:block;">F</span>
+                </td>
+                <td style="padding-left:10px; vertical-align:middle;">
+                  <span style="font-size:18px; font-weight:800; color:#ffffff;">FinLaya</span>
+                </td>
+              </tr>
+            </table>
+            <p style="margin:14px 0 0; font-size:13px; color:#9ca3af;">
+              Budget Alert
+              &nbsp;&#183;&nbsp;
+              <span style="color:${hasCritical ? '#ef4444' : '#eab308'}; font-weight:600;">
+                ${alerts.length} ${alerts.length === 1 ? 'category needs attention' : 'categories need attention'}
+              </span>
+            </p>
+          </td>
+          <td align="right" valign="bottom">
+            <p style="margin:0; font-size:11px; color:#6b7280;">Generated ${generatedOn}</p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- ORANGE ACCENT LINE -->
+  <tr>
+    <td style="height:3px; background:linear-gradient(90deg, #f97316, #fb923c, #fdba74);"></td>
+  </tr>
+
+  <!-- GREETING -->
+  <tr>
+    <td style="padding:24px 32px 0;">
+      <p style="margin:0; font-size:14px; color:#374151; line-height:1.6;">
+        Hi <strong style="color:#111827;">${userName}</strong>,
+        one or more of your budget categories
+        ${hasCritical ? 'have exceeded or are very close to their limit' : 'are approaching their limit'}
+        this month.
+      </p>
+    </td>
+  </tr>
+
+  <!-- ALERT TABLE -->
+  <tr>
+    <td style="padding:20px 32px 8px;">
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+        <tr style="background:#f9fafb;">
+          <td style="padding:9px 16px; font-size:11px; font-weight:700; color:#6b7280;
+                     text-transform:uppercase; letter-spacing:0.5px;
+                     border-bottom:1px solid #e5e7eb;">Category</td>
+          <td style="padding:9px 16px; font-size:11px; font-weight:700; color:#6b7280;
+                     text-transform:uppercase; letter-spacing:0.5px;
+                     border-bottom:1px solid #e5e7eb; text-align:right;">Budget</td>
+          <td style="padding:9px 16px; font-size:11px; font-weight:700; color:#6b7280;
+                     text-transform:uppercase; letter-spacing:0.5px;
+                     border-bottom:1px solid #e5e7eb; text-align:right;">Spent</td>
+          <td style="padding:9px 16px; font-size:11px; font-weight:700; color:#6b7280;
+                     text-transform:uppercase; letter-spacing:0.5px;
+                     border-bottom:1px solid #e5e7eb;">Usage</td>
+        </tr>
+        ${alertRows}
+      </table>
+    </td>
+  </tr>
+
+  <!-- TIP -->
+  <tr>
+    <td style="padding:12px 32px 8px;">
+      <table width="100%" cellpadding="0" cellspacing="0"
+             style="background:#fafafa; border:1px solid #e5e7eb; border-radius:8px; overflow:hidden;">
+        <tr>
+          <td width="4" style="background:#f97316;">&nbsp;</td>
+          <td style="padding:12px 14px; font-size:12px; color:#374151; line-height:1.5;">
+            <strong>Tip:</strong> Review your spending in the categories above.
+            You can update your budgets anytime from the Categories page in the app.
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <!-- CTA BUTTON -->
+  <tr>
+    <td style="padding:8px 32px 28px; text-align:center;">
+      <a href="${process.env.APP_URL || 'http://localhost:3000'}/categories"
+         style="display:inline-block; background:#111827; color:#ffffff;
+                font-size:13px; font-weight:600; padding:12px 28px;
+                border-radius:8px; text-decoration:none; letter-spacing:0.2px;">
+        View Budget Categories &nbsp;&#8594;
+      </a>
+    </td>
+  </tr>
+
+  <!-- FOOTER -->
+  <tr>
+    <td style="background:#f9fafb; padding:16px 32px; border-top:1px solid #e5e7eb;">
+      <p style="margin:0; font-size:11px; color:#9ca3af; text-align:center; line-height:1.7;">
+        This alert was sent automatically by FinLaya.<br/>
+        To stop receiving budget alerts, go to
+        <strong style="color:#6b7280;">Settings &rarr; Notifications</strong>
+        and turn off Budget Alerts.
+      </p>
+    </td>
+  </tr>
+
+</table>
+</td></tr>
+</table>
+
+</body>
+</html>
+  `;
+}
+
+async function sendBudgetAlertEmail({ toEmail, userName, alerts }) {
+  const hasCritical = alerts.some((a) => a.severity === 'critical');
+  const subject     = hasCritical
+    ? `FinLaya Budget Alert — Action Needed`
+    : `FinLaya Budget Alert — Heads Up`;
+
+  await transporter.sendMail({
+    from: `"FinLaya" <${process.env.GMAIL_USER}>`,
+    to:   toEmail,
+    subject,
+    html: buildBudgetAlertEmailHTML({ userName, alerts }),
+  });
+}
+
+module.exports = { sendReportEmail, sendBudgetAlertEmail };
