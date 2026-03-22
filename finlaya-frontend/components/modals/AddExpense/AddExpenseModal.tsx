@@ -26,14 +26,14 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
   const { user } = useAuth();
   const { refresh } = useNotifications();
 
-  const [categories,         setCategories]         = useState<Category[]>([]);
-  const [categoryInput,      setCategoryInput]       = useState('');
-  const [showSuggestions,    setShowSuggestions]     = useState(false);
-  const [selectedCategory,   setSelectedCategory]    = useState<Category | null>(null);
-  const [isLoading,          setIsLoading]           = useState(false);
-  const [error,              setError]               = useState('');
-  const [netBalance,         setNetBalance]          = useState<number | null>(null);
-  const [emiExceedsSalary,   setEmiExceedsSalary]    = useState(false);
+  const [categories,       setCategories]       = useState<Category[]>([]);
+  const [categoryInput,    setCategoryInput]     = useState('');
+  const [showSuggestions,  setShowSuggestions]   = useState(false);
+  const [selectedCategory, setSelectedCategory]  = useState<Category | null>(null);
+  const [isLoading,        setIsLoading]         = useState(false);
+  const [error,            setError]             = useState('');
+  const [netBalance,       setNetBalance]        = useState<number | null>(null);
+  const [emiExceedsSalary, setEmiExceedsSalary]  = useState(false);
 
   const categoryRef = useRef<HTMLDivElement>(null);
 
@@ -114,28 +114,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
     if (e.target.name === 'amount') setError('');
   };
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
-
-  // Calls the backend to check budgets and send email if threshold crossed.
-  // Fire-and-forget — we don't await this, so the modal closes instantly.
-  const triggerBudgetAlertCheck = () => {
-    supabase.auth.getSession().then(({ data }) => {
-      const token = data?.session?.access_token;
-      if (!token) return;
-
-      fetch(`${BACKEND_URL}/api/budget-alerts/check`, {
-        method:  'POST',
-        headers: {
-          'Content-Type':  'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-      }).catch((err) => {
-        // Silently ignore — alert email is best-effort
-        console.warn('[AddExpenseModal] budget alert check failed:', err.message);
-      });
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.id) return;
@@ -198,15 +176,11 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
       setCategoryInput('');
       setSelectedCategory(null);
 
-      // Notify parent and close modal
       onSuccess();
       onClose();
 
-      // Re-check budget alerts in the bell icon
+      // refresh() now handles BOTH bell icon update AND backend email check
       await refresh();
-
-      // Also trigger backend to send email alert if threshold crossed
-      triggerBudgetAlertCheck();
 
     } catch (err) {
       console.error('[AddExpenseModal]', err);
@@ -290,7 +264,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   </div>
                 )}
 
-                {/* Title */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Title</label>
                   <input
@@ -300,7 +273,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   />
                 </div>
 
-                {/* Amount */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Amount</label>
                   <div className="relative">
@@ -329,7 +301,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   )}
                 </div>
 
-                {/* Category */}
                 <div ref={categoryRef}>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Category</label>
                   <div className="relative">
@@ -378,7 +349,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   )}
                 </div>
 
-                {/* Date */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Date</label>
                   <input type="date" name="date" value={form.date} onChange={handleChange} required
@@ -386,7 +356,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   />
                 </div>
 
-                {/* Payment Method */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Payment Method</label>
                   <select name="paymentMethod" value={form.paymentMethod} onChange={handleChange}
@@ -396,7 +365,6 @@ export default function AddExpenseModal({ isOpen, onClose, onSuccess }: AddExpen
                   </select>
                 </div>
 
-                {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">
                     Notes <span className="text-gray-400 font-normal">(optional)</span>

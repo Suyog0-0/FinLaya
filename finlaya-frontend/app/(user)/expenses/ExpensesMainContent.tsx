@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { TrendingUp, TrendingDown, ChevronDown, RotateCcw } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useNotifications } from '@/lib/contexts/NotificationContext';
 import AddExpenseModal      from '@/components/modals/AddExpense/AddExpenseModal';
 import AddIncomeModal       from '@/components/modals/AddIncome/AddIncomeModal';
 import EditTransactionModal from '@/components/modals/EditTransaction/EditTransactionModal';
@@ -72,7 +73,8 @@ const MONTHS = [
 ];
 
 export default function ExpensesMainContent() {
-  const { user } = useAuth();
+  const { user }    = useAuth();
+  const { refresh } = useNotifications();
 
   const now = new Date();
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
@@ -175,9 +177,9 @@ export default function ExpensesMainContent() {
     const col   = type === 'expense' ? 'expense_id' : 'income_id';
     await supabase.from(table).delete().eq(col, id).eq('user_id', user?.id);
     fetchAll();
+    refresh();
   };
 
-  // Reset filter to current month
   const goToCurrentMonth = () => {
     setSelectedMonth(now.getMonth());
     setSelectedYear(now.getFullYear());
@@ -192,13 +194,10 @@ export default function ExpensesMainContent() {
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
-
-          {/* Title + period selectors */}
           <div>
             <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
 
-              {/* Month dropdown */}
               <div className="relative">
                 <select
                   value={selectedMonth}
@@ -210,7 +209,6 @@ export default function ExpensesMainContent() {
                 <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
 
-              {/* Year dropdown */}
               <div className="relative">
                 <select
                   value={selectedYear}
@@ -222,7 +220,6 @@ export default function ExpensesMainContent() {
                 <ChevronDown size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
 
-              {/* Today button — only shown when not on current month */}
               {!isCurrentMonth && (
                 <button
                   onClick={goToCurrentMonth}
@@ -247,11 +244,9 @@ export default function ExpensesMainContent() {
             </div>
           </div>
 
-          {/* Action buttons — TrendingUp for income, TrendingDown for expense */}
           <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={() => setIsIncomeModalOpen(true)}
-              title="Add Income"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-sm transition-colors shadow-sm"
             >
               <TrendingUp size={15} strokeWidth={2.5} />
@@ -259,7 +254,6 @@ export default function ExpensesMainContent() {
             </button>
             <button
               onClick={() => setIsExpenseModalOpen(true)}
-              title="Add Expense"
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500 hover:bg-red-600 text-white font-semibold text-sm transition-colors shadow-sm"
             >
               <TrendingDown size={15} strokeWidth={2.5} />
@@ -307,7 +301,7 @@ export default function ExpensesMainContent() {
       <EditTransactionModal
         isOpen={!!editingTransaction}
         onClose={() => setEditingTransaction(null)}
-        onSuccess={() => { setEditingTransaction(null); fetchAll(); }}
+        onSuccess={() => { setEditingTransaction(null); fetchAll(); refresh(); }}
         transaction={editingTransaction}
       />
     </div>
