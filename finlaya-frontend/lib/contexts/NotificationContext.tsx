@@ -163,7 +163,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const [toasts,        setToasts]        = useState<AppNotification[]>([]);
   const [loading,       setLoading]       = useState(true);
 
-  // Track which IDs we've already seen so we only toast truly new ones
   const knownIds = useRef<Set<string>>(new Set());
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
@@ -177,7 +176,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     const fetched = (data || []) as AppNotification[];
 
-    // First load — populate knownIds silently, no toasts yet
     if (knownIds.current.size === 0) {
       fetched.forEach((n) => knownIds.current.add(n.id));
       setNotifications(fetched);
@@ -185,7 +183,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       return;
     }
 
-    // Subsequent refreshes — diff to find brand new notifications
     const brandNew = fetched.filter((n) => !knownIds.current.has(n.id));
     brandNew.forEach((n) => knownIds.current.add(n.id));
 
@@ -197,6 +194,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     setLoading(false);
   }, []);
 
+  // ── Calls backend to check budgets and send email if threshold crossed ──────
+  // Fire-and-forget — we don't await this so the UI stays fast.
+  // This is called inside refresh() so it triggers on ANY action:
+  // add expense, edit expense, delete expense — not just add.
+  const triggerBackendEmailCheck = useCallback((token: string) => {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+
+    fetch(`${backendUrl}/api/budget-alerts/check`, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${token}`,
+      },
+    }).catch((err) => {
+      console.warn('[notifications] budget alert email check failed:', err.message);
+    });
+  }, []);
+
+  // ── Main refresh — called after any expense/income change ─────────────────
   const refresh = useCallback(async () => {
     if (!user?.id) return;
 
@@ -209,6 +225,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     if (!session) return;
 
     const userId = session.user.id;
+    const token  = session.access_token;
 
     const { data: prefs } = await supabase
       .from('notification_preferences').select('budget_alerts, bill_reminders')
@@ -217,7 +234,11 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     await generateBudgetAlerts(userId,  prefs?.budget_alerts  ?? true);
     await generateBillReminders(userId, prefs?.bill_reminders ?? true);
     await fetchNotifications(userId);
-  }, [user?.id, fetchNotifications]);
+
+    // Trigger backend email check — runs in background, doesn't block UI
+    // Handles both add AND edit AND delete — anything that calls refresh()
+    triggerBackendEmailCheck(token);
+  }, [user?.id, fetchNotifications, triggerBackendEmailCheck]);
 
   useEffect(() => {
     if (user?.id) refresh();
