@@ -158,20 +158,21 @@ export default function ProfileBox({
   const displayImage = avatarPreview || avatarUrl;
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
       {/* Section header */}
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100 dark:border-gray-700">
+        {/* FIXED: icon bg + color for dark mode */}
+        <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
           <User size={18} className="text-orange-500" />
         </div>
         <div>
-          <p className="font-semibold text-gray-900">Profile Settings</p>
-          <p className="text-xs text-gray-400 mt-0.5">Update your personal information</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">Profile Settings</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Update your personal information</p>
         </div>
       </div>
 
       {/* Avatar section */}
-      <div className="flex items-center gap-5 mb-7 pb-6 border-b border-gray-100">
+      <div className="flex items-center gap-5 mb-7 pb-6 border-b border-gray-100 dark:border-gray-700">
         {/* Avatar display */}
         <div className="relative group">
           {displayImage ? (
@@ -184,8 +185,8 @@ export default function ProfileBox({
                 className="rounded-full object-cover border-2 border-orange-200"
               />
               {/* Hover overlay for desktop */}
-              <label 
-                htmlFor="avatar-upload" 
+              <label
+                htmlFor="avatar-upload"
                 className="absolute inset-0 rounded-full bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
               >
                 <Camera size={20} className="text-white" />
@@ -217,12 +218,12 @@ export default function ProfileBox({
 
         {/* Upload controls */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 mb-2">Profile Photo</p>
-          
+          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">Profile Photo</p>
+
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all font-medium"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 transition-all font-medium"
             >
               <Camera size={14} />
               Change
@@ -244,7 +245,7 @@ export default function ProfileBox({
                 </button>
                 <button
                   onClick={handleCancelPreview}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-200 rounded-lg text-sm text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 border border-gray-200 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-gray-700 transition-colors"
                 >
                   <X size={14} />
                   Cancel
@@ -253,7 +254,7 @@ export default function ProfileBox({
             )}
           </div>
 
-          <p className="text-xs text-gray-400 mt-2">JPG, PNG or GIF. Max 2MB.</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">JPG, PNG or GIF. Max 2MB.</p>
 
           {/* Avatar message */}
           {avatarMsg && (
@@ -270,36 +271,37 @@ export default function ProfileBox({
       {/* Name + Email */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
         <div>
-          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
-            <User size={14} className="text-gray-400" />
+          {/* FIXED: label icons use explicit colors so they don't go white in dark */}
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <User size={14} className="text-gray-400 dark:text-gray-500" />
             Full Name
           </label>
           <input
             type="text"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
-            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 focus:bg-white bg-gray-50 transition-all"
+            className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 focus:bg-white dark:focus:bg-gray-700 bg-gray-50 dark:bg-gray-700/50 transition-all"
             placeholder="Enter your name"
           />
         </div>
         <div>
-          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
-            <Mail size={14} className="text-gray-400" />
+          <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <Mail size={14} className="text-gray-400 dark:text-gray-500" />
             Email
           </label>
           <input
             type="email"
             value={email}
             disabled
-            className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 bg-gray-50 cursor-not-allowed"
+            className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-700/30 cursor-not-allowed"
           />
         </div>
       </div>
 
       {/* Phone */}
       <div className="mb-6">
-        <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 mb-1.5">
-          <Phone size={14} className="text-gray-400" />
+        <label className="flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+          <Phone size={14} className="text-gray-400 dark:text-gray-500" />
           Phone Number
         </label>
         <input
@@ -307,15 +309,15 @@ export default function ProfileBox({
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
           placeholder="+977 98XXXXXXXX"
-          className="w-full sm:w-80 px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 focus:bg-white bg-gray-50 transition-all"
+          className="w-full sm:w-80 px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 focus:bg-white dark:focus:bg-gray-700 bg-gray-50 dark:bg-gray-700/50 transition-all"
         />
       </div>
 
       {/* Save button + message */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-gray-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-4 border-t border-gray-100 dark:border-gray-700">
         {msg && (
           <p className={`text-sm font-medium flex items-center gap-1.5 ${
-            msg.includes('Failed') ? 'text-red-500' : 'text-green-600'
+            msg.includes('Failed') ? 'text-red-500' : 'text-green-600 dark:text-green-400'
           }`}>
             {msg.includes('Failed') ? <X size={14} /> : <Check size={14} />}
             {msg}

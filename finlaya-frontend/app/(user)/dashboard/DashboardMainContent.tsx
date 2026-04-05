@@ -23,8 +23,6 @@ function currentMonthKey(): string {
 }
 
 // ── Per-user localStorage keys ─────────────────────────────────────────────────
-// onboarding_month_{userId}  → last YYYY-MM the user completed / dismissed onboarding
-// onboarding_done_{userId}   → 'true' if user has ever completed initial setup
 const monthKey  = (uid: string) => `finlaya_onboarding_month_${uid}`;
 const doneKey   = (uid: string) => `finlaya_onboarding_done_${uid}`;
 
@@ -53,7 +51,6 @@ export default function DashboardMainContent() {
       const lastMonth  = localStorage.getItem(monthKey(user.id));
       const everDone   = localStorage.getItem(doneKey(user.id)) === 'true';
 
-      // Case 1: User has never completed setup → always show
       if (!everDone) {
         try {
           const [{ data: cats }, { data: userData }] = await Promise.all([
@@ -75,7 +72,6 @@ export default function DashboardMainContent() {
           if (!hasCategories || !hasSalary) {
             setShowOnboarding(true);
           } else {
-            // DB already has data — mark as done so we don't check again
             localStorage.setItem(doneKey(user.id),  'true');
             localStorage.setItem(monthKey(user.id), thisMonth);
           }
@@ -86,8 +82,6 @@ export default function DashboardMainContent() {
         return;
       }
 
-      // Case 2: User has completed setup before,
-      // but it's a new month → prompt to update monthly salary
       if (lastMonth !== thisMonth) {
         setShowOnboarding(true);
       }
@@ -98,8 +92,6 @@ export default function DashboardMainContent() {
     if (user) checkSetup();
   }, [user]);
 
-  // ── Dismiss without completing (X button) ─────────────────────────────────
-  // Still mark this month as seen so it doesn't pop up again mid-month
   const handleDismiss = () => {
     if (user?.id) {
       localStorage.setItem(monthKey(user.id), currentMonthKey());
@@ -107,7 +99,6 @@ export default function DashboardMainContent() {
     setShowOnboarding(false);
   };
 
-  // ── Completed successfully ─────────────────────────────────────────────────
   const handleComplete = () => {
     if (user?.id) {
       localStorage.setItem(doneKey(user.id),  'true');
@@ -121,27 +112,27 @@ export default function DashboardMainContent() {
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading || isCheckingSetup) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117]">
         <div className="max-w-7xl mx-auto px-4 py-8 animate-pulse">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <div className="h-8 w-48 bg-gray-200 rounded mb-3" />
-              <div className="h-4 w-72 bg-gray-200 rounded" />
+              <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-3" />
+              <div className="h-4 w-72 bg-gray-200 dark:bg-gray-700 rounded" />
             </div>
-            <div className="h-12 w-36 bg-gray-200 rounded-lg" />
+            <div className="h-12 w-36 bg-gray-200 dark:bg-gray-700 rounded-lg" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-28 bg-gray-200 rounded-xl" />
+              <div key={i} className="h-28 bg-gray-200 dark:bg-gray-700 rounded-xl" />
             ))}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            <div className="h-72 bg-gray-200 rounded-xl" />
-            <div className="h-72 bg-gray-200 rounded-xl" />
+            <div className="h-72 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <div className="h-72 bg-gray-200 dark:bg-gray-700 rounded-xl" />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-64 bg-gray-200 rounded-xl" />
-            <div className="h-64 bg-gray-200 rounded-xl" />
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
+            <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl" />
           </div>
         </div>
       </div>
@@ -152,17 +143,18 @@ export default function DashboardMainContent() {
 
   return (
     <>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117]">
         <div className="max-w-7xl mx-auto px-4 py-8">
 
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h1>
-              <p className="text-gray-600">Welcome back! Here&apos;s your financial overview.</p>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-2">Dashboard</h1>
+              <p className="text-gray-600 dark:text-gray-400">Welcome back! Here&apos;s your financial overview.</p>
             </div>
+            {/* FIXED: View Expenses button — better dark mode appearance */}
             <button
               onClick={() => router.push('/expenses')}
-              className="group inline-flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-200/40 hover:shadow-amber-300/50 hover:from-amber-600 hover:to-orange-600 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 focus:ring-offset-gray-50 transition-all duration-200 cursor-pointer"
+              className="group inline-flex items-center gap-2.5 px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 dark:from-orange-500 dark:to-orange-600 text-white font-semibold text-sm rounded-xl shadow-lg shadow-amber-200/40 dark:shadow-orange-900/30 hover:shadow-amber-300/50 dark:hover:shadow-orange-900/50 hover:from-amber-600 hover:to-orange-600 dark:hover:from-orange-600 dark:hover:to-orange-700 active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-amber-400 dark:focus:ring-orange-500 focus:ring-offset-2 focus:ring-offset-gray-50 dark:focus:ring-offset-[#0f1117] transition-all duration-200 cursor-pointer"
             >
               <span>View Expenses</span>
               <ArrowRight

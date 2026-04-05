@@ -151,10 +151,10 @@ export default function CategoriesMainContent() {
     refetch();
   };
 
-  // ── Dark-mode-aware skeleton ────────────────────────────────────────────────
+  // ── Skeleton — always dark-mode aware, no white flash ──────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] px-6 py-8 max-w-5xl mx-auto animate-pulse">
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] transition-colors px-6 py-8 max-w-5xl mx-auto animate-pulse">
         <div className="h-8 w-56 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
         <div className="h-4 w-80 bg-gray-100 dark:bg-gray-700/60 rounded mb-8" />
         <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-2xl mb-5" />

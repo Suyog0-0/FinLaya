@@ -8,6 +8,7 @@ import {
 import { Target, TrendingUp, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface CategoryData {
   name: string;
@@ -71,6 +72,9 @@ function truncateName(name: string, max = 10): string {
 
 export default function CategoryBreakdownChart() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [data, setData] = useState<CategoryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -149,6 +153,13 @@ export default function CategoryBreakdownChart() {
     return String(value);
   };
 
+  // Theme-aware colors
+  const gridColor  = isDark ? '#374151' : '#f1f5f9'; // gray-700 in dark
+  const axisColor  = isDark ? '#6b7280' : '#9ca3af';
+  const tickColor  = isDark ? '#9ca3af' : '#6b7280';
+  // Budget bar colour — a muted green that still reads in dark
+  const budgetFill = isDark ? '#166534' : '#bbf7d0'; // dark-green vs light-green
+
   if (!isLoading && data.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
@@ -191,7 +202,7 @@ export default function CategoryBreakdownChart() {
             <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Spent</span>
           </div>
           <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div className="w-2.5 h-2.5 rounded-full bg-green-300" />
+            <div className="w-2.5 h-2.5 rounded-full bg-green-500 dark:bg-green-700" />
             <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Budget</span>
           </div>
         </div>
@@ -210,25 +221,27 @@ export default function CategoryBreakdownChart() {
             barCategoryGap="35%"
             barGap={4}
           >
-            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            {/* FIXED: grey grid lines in dark mode */}
+            <CartesianGrid strokeDasharray="4 4" stroke={gridColor} vertical={false} />
             <XAxis
               dataKey="name"
-              stroke="#9ca3af"
+              stroke={axisColor}
               style={{ fontSize: '11px' }}
-              tick={{ fill: '#6b7280' }}
+              tick={{ fill: tickColor }}
               tickFormatter={(v) => truncateName(v)}
               tickMargin={8}
             />
             <YAxis
               tickFormatter={formatValue}
-              stroke="#9ca3af"
+              stroke={axisColor}
               style={{ fontSize: '11px' }}
               width={42}
               tickMargin={4}
+              tick={{ fill: tickColor }}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(251, 146, 60, 0.05)' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ fill: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(251,146,60,0.05)' }} />
 
-            <Bar dataKey="limit" name="limit" fill="#bbf7d0" radius={[6, 6, 0, 0]} opacity={0.6} />
+            <Bar dataKey="limit" name="limit" fill={budgetFill} radius={[6, 6, 0, 0]} opacity={isDark ? 0.8 : 0.6} />
 
             <Bar dataKey="spent" name="spent" radius={[6, 6, 0, 0]} animationDuration={500}>
               {data.map((entry, index) => (

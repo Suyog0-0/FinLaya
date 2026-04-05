@@ -189,20 +189,20 @@ export default function ExpensesMainContent() {
   const periodLabel    = isCurrentMonth ? 'This month' : `${MONTHS[selectedMonth]} ${selectedYear}`;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117]">
       <div className="max-w-4xl mx-auto px-6 py-8">
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
           <div>
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl font-bold text-gray-900">Transactions</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Transactions</h1>
 
               <div className="relative">
                 <select
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                  className="appearance-none bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 cursor-pointer transition-all shadow-sm"
+                  className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 cursor-pointer transition-all shadow-sm"
                 >
                   {MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}
                 </select>
@@ -213,7 +213,7 @@ export default function ExpensesMainContent() {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(Number(e.target.value))}
-                  className="appearance-none bg-white border border-gray-200 text-gray-700 text-sm font-medium rounded-xl px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 cursor-pointer transition-all shadow-sm"
+                  className="appearance-none bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl px-3 py-1.5 pr-7 focus:outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 cursor-pointer transition-all shadow-sm"
                 >
                   {years.map((y) => <option key={y} value={y}>{y}</option>)}
                 </select>
@@ -224,7 +224,7 @@ export default function ExpensesMainContent() {
                 <button
                   onClick={goToCurrentMonth}
                   title="Go to current month"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-orange-600 text-xs font-semibold border border-orange-100 transition-colors"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-semibold border border-orange-100 dark:border-orange-800 transition-colors"
                 >
                   <RotateCcw size={12} strokeWidth={2.5} />
                   Today
@@ -233,11 +233,12 @@ export default function ExpensesMainContent() {
             </div>
 
             <div className="flex items-center gap-2 mt-2">
-              <span className="text-xs font-medium text-orange-600 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-md">
+              {/* FIXED: This month tag dark mode */}
+              <span className="text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/25 border border-orange-100 dark:border-orange-800/60 px-2 py-0.5 rounded-md">
                 {periodLabel}
               </span>
               {!isLoading && (
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-400 dark:text-gray-500">
                   {filtered.length} {filtered.length === 1 ? 'transaction' : 'transactions'}
                 </span>
               )}

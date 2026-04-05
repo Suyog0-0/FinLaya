@@ -5,6 +5,7 @@ import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaCh
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useAuth } from '@/lib/contexts/AuthContext';
+import { useTheme } from '@/lib/contexts/ThemeContext';
 
 interface MonthData {
   month: string;
@@ -79,6 +80,9 @@ const CustomTooltip = ({
 
 export default function SpendingTrendChart() {
   const { user } = useAuth();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+
   const [data, setData] = useState<MonthData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -165,6 +169,12 @@ export default function SpendingTrendChart() {
 
   const trend = getTrend();
 
+  // Theme-aware colors
+  const gridColor   = isDark ? '#374151' : '#f1f5f9'; // dark: gray-700, light: slate-100
+  const axisColor   = isDark ? '#6b7280' : '#9ca3af'; // dark: gray-500, light: gray-400
+  const tickColor   = isDark ? '#9ca3af' : '#6b7280';
+  const cursorColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(241,245,249,0.8)';
+
   if (!isLoading && data.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
@@ -231,30 +241,32 @@ export default function SpendingTrendChart() {
           <AreaChart data={data} margin={{ top: 16, right: 8, left: -8, bottom: 0 }}>
             <defs>
               <linearGradient id="incomeGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#34d399" stopOpacity={0.3} />
+                <stop offset="5%" stopColor="#34d399" stopOpacity={isDark ? 0.2 : 0.3} />
                 <stop offset="95%" stopColor="#34d399" stopOpacity={0.03} />
               </linearGradient>
               <linearGradient id="expenseGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
+                <stop offset="5%" stopColor="#f97316" stopOpacity={isDark ? 0.2 : 0.3} />
                 <stop offset="95%" stopColor="#f97316" stopOpacity={0.03} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="4 4" stroke="#f1f5f9" vertical={false} />
+            {/* FIXED: grey grid lines in dark mode instead of white */}
+            <CartesianGrid strokeDasharray="4 4" stroke={gridColor} vertical={false} />
             <XAxis
               dataKey="month"
-              stroke="#9ca3af"
+              stroke={axisColor}
               style={{ fontSize: '11px' }}
-              tick={{ fill: '#6b7280' }}
+              tick={{ fill: tickColor }}
               tickMargin={8}
             />
             <YAxis
               tickFormatter={formatYAxis}
-              stroke="#9ca3af"
+              stroke={axisColor}
               style={{ fontSize: '11px' }}
               width={44}
               tickMargin={4}
+              tick={{ fill: tickColor }}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#f1f5f9', strokeDasharray: '4 4' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: cursorColor, strokeDasharray: '4 4' }} />
 
             <Area
               type="monotone"
@@ -263,7 +275,7 @@ export default function SpendingTrendChart() {
               strokeWidth={2.5}
               fill="url(#incomeGrad)"
               dot={{ fill: '#34d399', strokeWidth: 0, r: 3 }}
-              activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
+              activeDot={{ r: 5, stroke: isDark ? '#1f2937' : '#fff', strokeWidth: 2 }}
               animationDuration={600}
             />
             <Area
@@ -273,7 +285,7 @@ export default function SpendingTrendChart() {
               strokeWidth={2.5}
               fill="url(#expenseGrad)"
               dot={{ fill: '#f97316', strokeWidth: 0, r: 3 }}
-              activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
+              activeDot={{ r: 5, stroke: isDark ? '#1f2937' : '#fff', strokeWidth: 2 }}
               animationDuration={600}
             />
           </AreaChart>

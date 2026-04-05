@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase/client';
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
-    <button type="button" onClick={() => onChange(!checked)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-orange-500' : 'bg-gray-300'}`}>
+    <button type="button" onClick={() => onChange(!checked)} className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${checked ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'}`}>
       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-6' : 'translate-x-1'}`} />
     </button>
   );
@@ -48,51 +48,81 @@ export default function SecurityBox() {
   const handleCancel = () => { setShowForm(false); setMsg(''); setNewPassword(''); setConfirmPassword(''); };
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+        {/* FIXED: icon bg + color properly set for dark mode */}
+        <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
           <Shield size={18} className="text-orange-500" />
         </div>
         <div>
-          <p className="font-semibold text-gray-900">Security</p>
-          <p className="text-xs text-gray-400 mt-0.5">Manage your account security</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">Security</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Manage your account security</p>
         </div>
       </div>
 
       {/* Change Password Button */}
-      <button onClick={() => { setShowForm(v => !v); setMsg(''); }} className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all font-medium">
-        <Shield size={14} />
+      <button
+        onClick={() => { setShowForm(v => !v); setMsg(''); }}
+        className="inline-flex items-center gap-2 px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 hover:border-gray-300 transition-all font-medium"
+      >
+        <Shield size={14} className="text-gray-500 dark:text-gray-400" />
         Change Password
       </button>
-      <p className="text-xs text-gray-400 mt-2">Last changed: 30 days ago</p>
+      <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">Last changed: 30 days ago</p>
 
       {/* Password Form */}
       {showForm && (
-        <div className="mt-5 space-y-4 p-4 bg-gray-50 rounded-xl">
+        <div className="mt-5 space-y-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
           {/* New Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">New Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">New Password</label>
             <div className="relative w-full sm:w-80">
-              <input type={showNewPassword ? 'text' : 'password'} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 pr-10" />
-              <button type="button" onClick={() => setShowNewPassword(v => !v)} className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">{showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+              <input
+                type={showNewPassword ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 bg-white dark:bg-gray-700 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowNewPassword(v => !v)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                {showNewPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
             {newPassword && <p className={`text-xs mt-1 font-medium ${strength.color}`}>• {strength.label}</p>}
           </div>
 
           {/* Confirm Password */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Confirm Password</label>
             <div className="relative w-full sm:w-80">
-              <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 pr-10" />
-              <button type="button" onClick={() => setShowConfirmPassword(v => !v)} className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600">{showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-orange-400 bg-white dark:bg-gray-700 pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(v => !v)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
-            {confirmPassword && newPassword === confirmPassword && <p className="text-xs mt-1 text-green-600 font-medium">✓ Passwords match</p>}
+            {confirmPassword && newPassword === confirmPassword && (
+              <p className="text-xs mt-1 text-green-600 dark:text-green-400 font-medium">✓ Passwords match</p>
+            )}
           </div>
 
           {/* Message */}
           {msg && (
-            <p className={`text-sm font-medium flex items-center gap-1.5 ${msg.includes('successfully') ? 'text-green-600' : 'text-red-500'}`}>
+            <p className={`text-sm font-medium flex items-center gap-1.5 ${msg.includes('successfully') ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
               {msg.includes('successfully') ? <Check size={14} /> : msg.includes('match') || msg.includes('characters') ? <AlertCircle size={14} /> : <X size={14} />}
               {msg}
             </p>
@@ -100,11 +130,20 @@ export default function SecurityBox() {
 
           {/* Buttons */}
           <div className="flex gap-2 pt-1">
-            <button onClick={handleChangePassword} disabled={saving} className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-50">
+            <button
+              onClick={handleChangePassword}
+              disabled={saving}
+              className="inline-flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl text-sm font-semibold hover:from-amber-600 hover:to-orange-600 transition-all disabled:opacity-50"
+            >
               {saving ? <span className="w-4 h-4 border-2 border-white/80 border-t-transparent rounded-full animate-spin" /> : <Check size={14} />}
               {saving ? 'Updating…' : 'Update'}
             </button>
-            <button onClick={handleCancel} className="px-4 py-2 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-100 transition-colors">Cancel</button>
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       )}
