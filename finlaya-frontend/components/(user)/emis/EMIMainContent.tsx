@@ -49,7 +49,6 @@ export default function EMIMainContent() {
     if (!user?.id) return;
     setIsLoading(true);
 
-    // Scope income/expenses to current month so available balance is accurate
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -76,9 +75,7 @@ export default function EMIMainContent() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, trigger]);
 
-  useEffect(() => {
-    fetchAll();
-  }, [fetchAll]);
+  useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const checkCategoryOverflow = async () => {
     if (!user?.id) return;
@@ -146,18 +143,14 @@ export default function EMIMainContent() {
     await checkCategoryOverflow();
   };
 
-  const handleSaveDirect = async (data: Omit<EMI, 'emi_id' | 'is_active'>) => {
-    await doSave(data, editingEMI);
-  };
-
+  const handleSaveDirect = async (data: Omit<EMI, 'emi_id' | 'is_active'>) => { await doSave(data, editingEMI); };
   const handleSaveNeedsConfirm = (data: Omit<EMI, 'emi_id' | 'is_active'>, message: string) => {
     const snap = editingEMI;
     setModalOpen(false);
     setAddConfirm({ isOpen: true, pendingData: data, message, editingEMISnap: snap });
   };
-
   const handleEdit = (emi: EMI) => { setEditingEMI(emi); setModalOpen(true); };
-  const handleAdd = () => { setEditingEMI(null); setModalOpen(true); };
+  const handleAdd  = () => { setEditingEMI(null); setModalOpen(true); };
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this loan? This will also remove its payment history.')) return;
@@ -187,30 +180,35 @@ export default function EMIMainContent() {
     doTogglePaid(emi, false);
   };
 
+  // ── Dark-mode-aware skeleton ────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6 max-w-4xl mx-auto animate-pulse">
-        <div className="h-8 w-48 bg-gray-200 rounded mb-2" />
-        <div className="h-4 w-72 bg-gray-100 rounded mb-8" />
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] p-6 max-w-4xl mx-auto animate-pulse">
+        <div className="h-8 w-48 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+        <div className="h-4 w-72 bg-gray-100 dark:bg-gray-700/60 rounded mb-8" />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-gray-200 rounded-2xl" />)}
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-28 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+          ))}
         </div>
         <div className="space-y-3">
-          {[...Array(3)].map((_, i) => <div key={i} className="h-16 bg-gray-200 rounded-2xl" />)}
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-16 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
+          ))}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] transition-colors">
       <div className="max-w-4xl mx-auto px-6 py-8">
 
-        {/* Page header — consistent with other pages */}
+        {/* Page header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">EMI & Loans</h1>
-            <p className="text-sm text-gray-500 mt-1">Track your active loans and monthly payments</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">EMI & Loans</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track your active loans and monthly payments</p>
           </div>
           <button
             onClick={handleAdd}

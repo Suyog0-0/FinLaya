@@ -34,9 +34,9 @@ export default function ProfileMainContent() {
 
   if (loading || !user) return null;
 
-  const userName = user.user_metadata?.full_name || 'Not provided';
-  const userEmail = user.email || 'Not provided';
-  const createdAt = user.created_at 
+  const userName   = user.user_metadata?.full_name || 'Not provided';
+  const userEmail  = user.email || 'Not provided';
+  const createdAt  = user.created_at
     ? new Date(user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
     : 'Not available';
   const lastSignIn = user.last_sign_in_at
@@ -46,41 +46,46 @@ export default function ProfileMainContent() {
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   const details = [
-    { icon: User, label: 'Full Name', value: userName },
-    { icon: Mail, label: 'Email', value: userEmail },
-    { icon: Calendar, label: 'Joined', value: createdAt },
-    { icon: LogIn, label: 'Last Sign In', value: lastSignIn },
+    { icon: User,     label: 'Full Name',    value: userName   },
+    { icon: Mail,     label: 'Email',        value: userEmail  },
+    { icon: Calendar, label: 'Joined',       value: createdAt  },
+    { icon: LogIn,    label: 'Last Sign In', value: lastSignIn },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-orange-50 py-10 px-4">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] py-10 px-4 transition-colors">
       <div className="max-w-2xl mx-auto">
 
         {/* Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 transition-colors">
+
           {/* Avatar + Name */}
-          <div className="flex flex-col items-center text-center mb-6 pb-6 border-b border-gray-100">
+          <div className="flex flex-col items-center text-center mb-6 pb-6 border-b border-gray-100 dark:border-gray-700">
             {avatarUrl ? (
-              <Image src={avatarUrl} alt="Profile" width={80} height={80} className="w-20 h-20 rounded-full object-cover border-3 border-orange-200 mb-3" />
+              <Image
+                src={avatarUrl} alt="Profile"
+                width={80} height={80}
+                className="w-20 h-20 rounded-full object-cover border-3 border-orange-200 mb-3"
+              />
             ) : (
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white font-bold text-2xl mb-3 shadow-md">
                 {userInitials}
               </div>
             )}
-            <h1 className="text-xl font-bold text-gray-900">{userName}</h1>
-            <p className="text-sm text-gray-500">{userEmail}</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">{userName}</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{userEmail}</p>
           </div>
 
           {/* Details */}
           <div className="space-y-4">
             {details.map(({ icon: Icon, label, value }) => (
               <div key={label} className="flex items-center gap-3 py-2">
-                <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0">
-                  <Icon size={16} className="text-gray-500" />
+                <div className="w-9 h-9 rounded-lg bg-gray-50 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                  <Icon size={16} className="text-gray-500 dark:text-gray-400" />
                 </div>
                 <div className="min-w-0">
-                  <p className="text-xs text-gray-400 font-medium">{label}</p>
-                  <p className="text-sm text-gray-800 truncate">{value}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 font-medium">{label}</p>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 truncate">{value}</p>
                 </div>
               </div>
             ))}

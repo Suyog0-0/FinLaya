@@ -9,21 +9,21 @@ import {
 } from 'lucide-react';
 
 const GOAL_ICONS = [
-  { name: 'target', icon: Target, color: 'text-orange-500' },
-  { name: 'home', icon: Home, color: 'text-blue-500' },
-  { name: 'car', icon: Car, color: 'text-slate-500' },
-  { name: 'plane', icon: Plane, color: 'text-sky-500' },
-  { name: 'graduation', icon: GraduationCap, color: 'text-indigo-500' },
-  { name: 'dumbbell', icon: Dumbbell, color: 'text-red-500' },
-  { name: 'gift', icon: Gift, color: 'text-pink-500' },
-  { name: 'smartphone', icon: Smartphone, color: 'text-zinc-500' },
-  { name: 'coffee', icon: Coffee, color: 'text-amber-600' },
-  { name: 'monitor', icon: Monitor, color: 'text-purple-500' },
-  { name: 'heart', icon: Heart, color: 'text-rose-500' },
-  { name: 'music', icon: Music, color: 'text-emerald-500' },
-  { name: 'umbrella', icon: Umbrella, color: 'text-cyan-500' },
-  { name: 'star', icon: Star, color: 'text-yellow-500' },
-  { name: 'briefcase', icon: Briefcase, color: 'text-slate-700' },
+  { name: 'target',     icon: Target,        color: 'text-orange-500' },
+  { name: 'home',       icon: Home,           color: 'text-blue-500'   },
+  { name: 'car',        icon: Car,            color: 'text-slate-500'  },
+  { name: 'plane',      icon: Plane,          color: 'text-sky-500'    },
+  { name: 'graduation', icon: GraduationCap,  color: 'text-indigo-500' },
+  { name: 'dumbbell',   icon: Dumbbell,       color: 'text-red-500'    },
+  { name: 'gift',       icon: Gift,           color: 'text-pink-500'   },
+  { name: 'smartphone', icon: Smartphone,     color: 'text-zinc-500'   },
+  { name: 'coffee',     icon: Coffee,         color: 'text-amber-600'  },
+  { name: 'monitor',    icon: Monitor,        color: 'text-purple-500' },
+  { name: 'heart',      icon: Heart,          color: 'text-rose-500'   },
+  { name: 'music',      icon: Music,          color: 'text-emerald-500'},
+  { name: 'umbrella',   icon: Umbrella,       color: 'text-cyan-500'   },
+  { name: 'star',       icon: Star,           color: 'text-yellow-500' },
+  { name: 'briefcase',  icon: Briefcase,      color: 'text-slate-700'  },
 ];
 
 interface AddGoalModalProps {
@@ -34,18 +34,18 @@ interface AddGoalModalProps {
     description: string;
     target_amount: number;
     deadline: string | null;
-    emoji: string; // matches DB column
+    emoji: string;
   }) => Promise<void>;
 }
 
 export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalProps) {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [title,        setTitle]        = useState('');
+  const [description,  setDescription]  = useState('');
   const [targetAmount, setTargetAmount] = useState('');
-  const [deadline, setDeadline] = useState('');
+  const [deadline,     setDeadline]     = useState('');
   const [selectedIcon, setSelectedIcon] = useState('target');
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [isSaving,     setIsSaving]     = useState(false);
+  const [error,        setError]        = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,11 +56,11 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
     setError('');
 
     await onSave({
-      title: title.trim(),
-      description: description.trim(),
+      title:         title.trim(),
+      description:   description.trim(),
       target_amount: parseFloat(targetAmount),
-      deadline: deadline || null,
-      emoji: selectedIcon, // store icon name in emoji column
+      deadline:      deadline || null,
+      emoji:         selectedIcon,
     });
 
     setTitle('');
@@ -73,7 +73,7 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
 
   const handleClose = () => { if (isSaving) return; setError(''); onClose(); };
 
-  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-800 placeholder-slate-400 focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none text-sm transition-all bg-slate-50 focus:bg-white";
+  const inputClass = "w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-gray-600 text-slate-800 dark:text-gray-100 placeholder-slate-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-orange-100 focus:border-orange-400 outline-none text-sm transition-all bg-slate-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600";
 
   return (
     <AnimatePresence>
@@ -91,35 +91,38 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 50, scale: 0.95 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto pointer-events-auto"
+              className="bg-white dark:bg-gray-800 w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl max-h-[90vh] overflow-y-auto pointer-events-auto"
               onClick={e => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-slate-100 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-800 z-10">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
                     <Target size={16} className="text-orange-500" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-slate-800">New Goal</h2>
-                    <p className="text-xs text-slate-400">Set your next savings target</p>
+                    <h2 className="text-base font-bold text-slate-800 dark:text-gray-100">New Goal</h2>
+                    <p className="text-xs text-slate-400 dark:text-gray-500">Set your next savings target</p>
                   </div>
                 </div>
-                <button onClick={handleClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
+                <button
+                  onClick={handleClose}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-gray-700 text-slate-400 dark:text-gray-500 transition-colors"
+                >
                   <X size={18} />
                 </button>
               </div>
 
               <form onSubmit={handleSubmit} className="px-6 py-5 space-y-5">
                 {error && (
-                  <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
                     ⚠️ {error}
                   </div>
                 )}
 
                 {/* Icon picker */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Icon</label>
+                  <label className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-2">Icon</label>
                   <div className="grid grid-cols-5 gap-2">
                     {GOAL_ICONS.map(({ name, icon: Icon, color }) => (
                       <button
@@ -128,11 +131,14 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
                         onClick={() => setSelectedIcon(name)}
                         className={`h-11 rounded-xl flex items-center justify-center transition-all border ${
                           selectedIcon === name
-                            ? 'bg-orange-50 border-orange-200 ring-2 ring-orange-100 scale-105'
-                            : 'bg-slate-50 border-transparent hover:bg-slate-100'
+                            ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-700 ring-2 ring-orange-100 dark:ring-orange-900 scale-105'
+                            : 'bg-slate-50 dark:bg-gray-700 border-transparent hover:bg-slate-100 dark:hover:bg-gray-600'
                         }`}
                       >
-                        <Icon size={18} className={selectedIcon === name ? color : 'text-slate-400'} />
+                        <Icon
+                          size={18}
+                          className={selectedIcon === name ? color : 'text-slate-400 dark:text-gray-400'}
+                        />
                       </button>
                     ))}
                   </div>
@@ -140,7 +146,7 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
 
                 {/* Title */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Goal Title</label>
+                  <label className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-2">Goal Title</label>
                   <input
                     type="text"
                     value={title}
@@ -154,9 +160,9 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
                 {/* Amount + Deadline */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Target Amount</label>
+                    <label className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-2">Target Amount</label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">NRs</span>
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-gray-500 text-sm font-medium">NRs</span>
                       <input
                         type="number"
                         value={targetAmount}
@@ -168,8 +174,8 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                      Deadline <span className="text-slate-300 normal-case font-normal">(optional)</span>
+                    <label className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-2">
+                      Deadline <span className="text-slate-300 dark:text-gray-600 normal-case font-normal">(optional)</span>
                     </label>
                     <input
                       type="date"
@@ -183,8 +189,8 @@ export default function AddGoalModal({ isOpen, onClose, onSave }: AddGoalModalPr
 
                 {/* Description */}
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
-                    Description <span className="text-slate-300 normal-case font-normal">(optional)</span>
+                  <label className="text-xs font-semibold text-slate-400 dark:text-gray-500 uppercase tracking-wider block mb-2">
+                    Description <span className="text-slate-300 dark:text-gray-600 normal-case font-normal">(optional)</span>
                   </label>
                   <textarea
                     value={description}

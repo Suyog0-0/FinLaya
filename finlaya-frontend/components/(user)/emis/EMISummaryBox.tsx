@@ -15,8 +15,6 @@ export default function EMISummaryBox({ emis, logs }: EMISummaryBoxProps) {
   const paidThisMonth = activeEMIs.filter((e) => isPaidThisMonth(e, logs)).length;
   const allPaid       = activeEMIs.length > 0 && paidThisMonth === activeEMIs.length;
 
-  // Only look for next due among EMIs that are NOT yet paid this month.
-  // If all are paid, nextDue stays null → card shows "All paid ✓"
   const nextDue = allPaid
     ? null
     : activeEMIs
@@ -30,32 +28,34 @@ export default function EMISummaryBox({ emis, logs }: EMISummaryBoxProps) {
       label:      'Monthly Burden',
       value:      formatNRs(totalMonthly),
       icon:       CreditCard,
-      bg:         'bg-blue-50',
-      border:     'border-blue-100',
-      iconColor:  'text-blue-600',
-      valueColor: 'text-blue-700',
+      bg:         'bg-blue-50 dark:bg-blue-900/20',
+      border:     'border-blue-100 dark:border-blue-800',
+      iconColor:  'text-blue-600 dark:text-blue-400',
+      valueColor: 'text-blue-700 dark:text-blue-300',
+      iconBg:     'bg-white/70 dark:bg-gray-800/70',
     },
     {
       label:      'Active Loans',
       value:      String(activeEMIs.length),
       icon:       TrendingDown,
-      bg:         'bg-amber-50',
-      border:     'border-amber-100',
-      iconColor:  'text-amber-600',
-      valueColor: 'text-amber-700',
+      bg:         'bg-amber-50 dark:bg-amber-900/20',
+      border:     'border-amber-100 dark:border-amber-800',
+      iconColor:  'text-amber-600 dark:text-amber-400',
+      valueColor: 'text-amber-700 dark:text-amber-300',
+      iconBg:     'bg-white/70 dark:bg-gray-800/70',
     },
     {
       label:      'Paid This Month',
       value:      `${paidThisMonth} / ${activeEMIs.length}`,
       icon:       CheckCircle2,
-      bg:         allPaid ? 'bg-emerald-50' : 'bg-gray-50',
-      border:     allPaid ? 'border-emerald-100' : 'border-gray-100',
-      iconColor:  allPaid ? 'text-emerald-600' : 'text-gray-400',
-      valueColor: allPaid ? 'text-emerald-700' : 'text-gray-600',
+      bg:         allPaid ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-gray-50 dark:bg-gray-700/50',
+      border:     allPaid ? 'border-emerald-100 dark:border-emerald-800' : 'border-gray-100 dark:border-gray-600',
+      iconColor:  allPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400 dark:text-gray-500',
+      valueColor: allPaid ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-600 dark:text-gray-300',
+      iconBg:     'bg-white/70 dark:bg-gray-800/70',
     },
     {
       label:    'Next Due In',
-      // When all paid → show a friendly "All paid ✓" instead of a due date
       value:    allPaid
                   ? 'All paid ✓'
                   : nextDue
@@ -64,25 +64,26 @@ export default function EMISummaryBox({ emis, logs }: EMISummaryBoxProps) {
       subLabel: allPaid ? 'No pending EMIs' : nextDue?.emi.loan_name,
       icon:     Calendar,
       bg:       allPaid
-                  ? 'bg-emerald-50'
+                  ? 'bg-emerald-50 dark:bg-emerald-900/20'
                   : nextDue && (nextDue.days ?? 99) <= 3
-                    ? 'bg-red-50'
-                    : 'bg-orange-50',
+                    ? 'bg-red-50 dark:bg-red-900/20'
+                    : 'bg-orange-50 dark:bg-orange-900/20',
       border:   allPaid
-                  ? 'border-emerald-100'
+                  ? 'border-emerald-100 dark:border-emerald-800'
                   : nextDue && (nextDue.days ?? 99) <= 3
-                    ? 'border-red-100'
-                    : 'border-orange-100',
+                    ? 'border-red-100 dark:border-red-800'
+                    : 'border-orange-100 dark:border-orange-800',
       iconColor:  allPaid
-                    ? 'text-emerald-600'
+                    ? 'text-emerald-600 dark:text-emerald-400'
                     : nextDue && (nextDue.days ?? 99) <= 3
-                      ? 'text-red-500'
-                      : 'text-orange-500',
+                      ? 'text-red-500 dark:text-red-400'
+                      : 'text-orange-500 dark:text-orange-400',
       valueColor: allPaid
-                    ? 'text-emerald-700'
+                    ? 'text-emerald-700 dark:text-emerald-300'
                     : nextDue && (nextDue.days ?? 99) <= 3
-                      ? 'text-red-600'
-                      : 'text-orange-600',
+                      ? 'text-red-600 dark:text-red-300'
+                      : 'text-orange-600 dark:text-orange-300',
+      iconBg:     'bg-white/70 dark:bg-gray-800/70',
     },
   ];
 
@@ -96,17 +97,17 @@ export default function EMISummaryBox({ emis, logs }: EMISummaryBoxProps) {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.07, duration: 0.3 }}
-            className={`${stat.bg} ${stat.border} border rounded-2xl p-5`}
+            className={`${stat.bg} ${stat.border} border rounded-2xl p-5 transition-colors`}
           >
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-medium text-gray-500">{stat.label}</p>
-              <div className="w-8 h-8 rounded-xl bg-white/70 flex items-center justify-center">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">{stat.label}</p>
+              <div className={`w-8 h-8 rounded-xl ${stat.iconBg} flex items-center justify-center`}>
                 <Icon size={15} className={stat.iconColor} />
               </div>
             </div>
             <p className={`text-2xl font-bold tabular-nums ${stat.valueColor}`}>{stat.value}</p>
             {stat.subLabel && (
-              <p className="text-xs text-gray-400 mt-1 truncate">{stat.subLabel}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 truncate">{stat.subLabel}</p>
             )}
           </motion.div>
         );

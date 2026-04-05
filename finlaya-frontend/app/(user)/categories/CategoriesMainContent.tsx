@@ -29,7 +29,6 @@ export default function CategoriesMainContent() {
 
   const refetch = () => setTrigger((t) => t + 1);
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!user?.id) return;
     let cancelled = false;
@@ -99,7 +98,6 @@ export default function CategoriesMainContent() {
   const totalBudget = categories.reduce((s, c) => s + c.budget_limit, 0);
   const totalSpent  = categories.reduce((s, c) => s + c.spent, 0);
 
-  // ── Handlers ───────────────────────────────────────────────────────────────
   const handleSaveSalary = async () => {
     const val = parseFloat(salaryInput);
     if (!val || val <= 0) { setSalaryError('Please enter a valid salary'); return; }
@@ -153,30 +151,29 @@ export default function CategoriesMainContent() {
     refetch();
   };
 
-  // ── Loading ─────────────────────────────────────────────────────────────────
+  // ── Dark-mode-aware skeleton ────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 px-6 py-8 max-w-5xl mx-auto animate-pulse">
-        <div className="h-8 w-56 bg-gray-200 rounded mb-2" />
-        <div className="h-4 w-80 bg-gray-100 rounded mb-8" />
-        <div className="h-20 bg-gray-200 rounded-2xl mb-5" />
-        <div className="h-36 bg-gray-200 rounded-2xl mb-6" />
-        <div className="h-64 bg-gray-200 rounded-2xl" />
+      <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] px-6 py-8 max-w-5xl mx-auto animate-pulse">
+        <div className="h-8 w-56 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+        <div className="h-4 w-80 bg-gray-100 dark:bg-gray-700/60 rounded mb-8" />
+        <div className="h-20 bg-gray-200 dark:bg-gray-700 rounded-2xl mb-5" />
+        <div className="h-36 bg-gray-200 dark:bg-gray-700 rounded-2xl mb-6" />
+        <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-2xl" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] transition-colors">
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* Page header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Budget Categories</h1>
-          <p className="text-sm text-gray-500 mt-1">Allocate your salary into different spending categories</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Budget Categories</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Allocate your salary into different spending categories</p>
         </div>
 
-        {/* Salary box — unchanged */}
         <MonthlySalaryBox
           salaryInput={salaryInput}
           salary={salary}
@@ -187,7 +184,6 @@ export default function CategoriesMainContent() {
           onSave={handleSaveSalary}
         />
 
-        {/* Allocation overview — unchanged */}
         <AllocationOverviewBox
           salary={salary}
           emiTotal={emiTotal}
@@ -197,12 +193,12 @@ export default function CategoriesMainContent() {
 
         {/* Empty state */}
         {categories.length === 0 && !showAddRow ? (
-          <div className="bg-white rounded-2xl border border-dashed border-gray-200 flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center py-20 text-center transition-colors">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mb-3">
               <Tag size={20} className="text-orange-400" />
             </div>
-            <p className="text-sm font-semibold text-gray-600 mb-1">No categories yet</p>
-            <p className="text-sm text-gray-400 mb-5">Click &quot;Add Category&quot; to get started</p>
+            <p className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-1">No categories yet</p>
+            <p className="text-sm text-gray-400 dark:text-gray-500 mb-5">Click &quot;Add Category&quot; to get started</p>
             <button
               onClick={() => setShowAddRow(true)}
               className="flex items-center gap-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-sm font-semibold transition-colors"
