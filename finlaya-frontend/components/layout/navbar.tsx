@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import NotificationBell from "@/components/layout/NotificationBell";
+import ThemeToggle from "@/components/layout/ThemeToggle";
 
 const navLinks = [
   { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
@@ -54,7 +55,7 @@ export default function Navbar() {
   const router   = useRouter();
   const { user, signOut } = useAuth();
 
-  const userName    = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const userName     = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const userInitials = userName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export default function Navbar() {
   const handleLogout = async () => { await signOut(); router.push("/login"); };
 
   return (
-    <nav className="bg-white/95 backdrop-blur-sm border-b border-gray-200 sticky top-0 z-50">
+    <nav className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
 
@@ -95,8 +96,8 @@ export default function Navbar() {
                   key={link.href} href={link.href} prefetch
                   className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                     isActive
-                      ? 'bg-orange-50 text-orange-600 shadow-sm'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400 shadow-sm'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-200'
                   }`}
                 >
                   <Icon size={16} />
@@ -106,8 +107,11 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* Right side: bell + user dropdown */}
+          {/* Right side: theme toggle + bell + user dropdown */}
           <div className="flex items-center gap-1">
+
+            {/* ── Theme Toggle ── */}
+            <ThemeToggle variant="icon" />
 
             {/* ── Notification bell ── */}
             <NotificationBell />
@@ -116,7 +120,7 @@ export default function Navbar() {
             <div className="hidden md:block relative ml-1">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 transition-all duration-200"
+                className="flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200"
               >
                 <AvatarCircle avatarUrl={avatarUrl} initials={userInitials} size="sm" />
                 <ChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
@@ -129,16 +133,19 @@ export default function Navbar() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -8 }}
                     transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden"
+                    className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
                   >
-                    <Link href={`/profile/${user?.id}`} prefetch onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <Link href={`/profile/${user?.id}`} prefetch onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <User size={14} /> Profile
                     </Link>
-                    <Link href="/settings" prefetch onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors">
+                    <Link href="/settings" prefetch onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                       <Settings size={14} /> Settings
                     </Link>
-                    <div className="border-t border-gray-100" />
-                    <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                    <div className="border-t border-gray-100 dark:border-gray-700" />
+                    <button onClick={handleLogout}
+                      className="flex items-center gap-2 px-4 py-3 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left">
                       <LogOut size={14} /> Logout
                     </button>
                   </motion.div>
@@ -149,7 +156,7 @@ export default function Navbar() {
             {/* Mobile toggle */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-all duration-200"
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-all duration-200 text-gray-600 dark:text-gray-400"
             >
               {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
@@ -165,7 +172,7 @@ export default function Navbar() {
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden overflow-hidden"
             >
-              <div className="py-3 space-y-1 border-t border-gray-100">
+              <div className="py-3 space-y-1 border-t border-gray-100 dark:border-gray-700">
                 {navLinks.map((link) => {
                   const Icon     = link.icon;
                   const isActive = pathname === link.href;
@@ -174,7 +181,9 @@ export default function Navbar() {
                       key={link.href} href={link.href} prefetch
                       onClick={() => setIsMenuOpen(false)}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
-                        isActive ? 'bg-orange-50 text-orange-600' : 'text-gray-600 hover:bg-gray-100'
+                        isActive
+                          ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                          : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
                       }`}
                     >
                       <Icon size={18} />
@@ -184,21 +193,30 @@ export default function Navbar() {
                 })}
 
                 {/* Mobile user section */}
-                <div className="border-t border-gray-100 pt-3 mt-2 space-y-1">
+                <div className="border-t border-gray-100 dark:border-gray-700 pt-3 mt-2 space-y-1">
                   <div className="flex items-center gap-3 px-3 py-2">
                     <AvatarCircle avatarUrl={avatarUrl} initials={userInitials} size="sm" />
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{userName}</p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{userName}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
                     </div>
                   </div>
-                  <Link href={`/profile/${user?.id}`} prefetch onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">
+
+                  {/* Theme toggle row in mobile menu */}
+                  <div className="px-1">
+                    <ThemeToggle variant="row" />
+                  </div>
+
+                  <Link href={`/profile/${user?.id}`} prefetch onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <User size={16} /> Profile
                   </Link>
-                  <Link href="/settings" prefetch onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition-colors">
+                  <Link href="/settings" prefetch onClick={() => setIsMenuOpen(false)}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                     <Settings size={16} /> Settings
                   </Link>
-                  <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                  <button onClick={handleLogout}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors w-full text-left">
                     <LogOut size={16} /> Logout
                   </button>
                 </div>

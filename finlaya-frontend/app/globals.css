@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* ── Tell Tailwind v4 to use class-based dark mode ── */
+@variant dark (&:where(.dark, .dark *));
+
+/* ── Light mode CSS variables (default) ── */
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -7,17 +11,173 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Surface colors */
+  --surface-primary: #ffffff;
+  --surface-secondary: #f9fafb;
+  --surface-tertiary: #f3f4f6;
+
+  /* Border */
+  --border-color: #e5e7eb;
+
+  /* Text */
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #6b7280;
+
+  /* Page background */
+  --page-bg: #f1f5f9;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Dark mode CSS variables ── */
+.dark {
+  --background: #0f1117;
+  --foreground: #f0f0f0;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* Surface colors */
+  --surface-primary: #1a1d27;
+  --surface-secondary: #22263a;
+  --surface-tertiary: #2a2f45;
+
+  /* Border */
+  --border-color: #2d3148;
+
+  /* Text */
+  --text-primary: #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+
+  /* Page background */
+  --page-bg: #0f1117;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ── Dark mode overrides for common surfaces ── */
+
+/* White cards / panels */
+.dark .bg-white {
+  background-color: var(--surface-primary) !important;
+}
+
+/* Light gray backgrounds used as page canvas */
+.dark .bg-gray-50 {
+  background-color: #13151f !important;
+}
+
+.dark .bg-gray-100 {
+  background-color: #1e2130 !important;
+}
+
+/* Borders */
+.dark .border-gray-100 {
+  border-color: #2a2f45 !important;
+}
+
+.dark .border-gray-200 {
+  border-color: #323655 !important;
+}
+
+/* Text overrides */
+.dark .text-gray-900 {
+  color: #f9fafb !important;
+}
+
+.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+
+.dark .text-gray-700 {
+  color: #e5e7eb !important;
+}
+
+.dark .text-gray-600 {
+  color: #d1d5db !important;
+}
+
+.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+
+.dark .text-gray-400 {
+  color: #6b7280 !important;
+}
+
+/* Input fields */
+.dark input[type="text"],
+.dark input[type="email"],
+.dark input[type="password"],
+.dark input[type="number"],
+.dark input[type="date"],
+.dark input[type="tel"],
+.dark select,
+.dark textarea {
+  background-color: #1e2130;
+  border-color: #2a2f45;
+  color: #f3f4f6;
+}
+
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #4b5563;
+}
+
+/* Navbar */
+.dark nav.bg-white\/95 {
+  background-color: rgba(26, 29, 39, 0.95) !important;
+  border-color: #2a2f45 !important;
+}
+
+/* Hover states on rows/items */
+.dark .hover\:bg-gray-50:hover {
+  background-color: #1e2130 !important;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #252842 !important;
+}
+
+/* Dropdown menus */
+.dark .bg-white.rounded-xl.shadow-lg,
+.dark .bg-white.rounded-2xl.shadow-xl,
+.dark .bg-white.rounded-2xl.shadow-2xl {
+  background-color: #1a1d27 !important;
+  border-color: #2a2f45 !important;
+}
+
+/* Table alternating rows */
+.dark .bg-gray-50\/60 {
+  background-color: rgba(30, 33, 48, 0.6) !important;
+}
+
+/* Chart backgrounds */
+.dark .recharts-wrapper,
+.dark .recharts-surface {
+  background-color: transparent !important;
+}
+
+/* Orange accent stays the same in dark — it pops nicely */
+/* So we do NOT override orange colors */
+
+/* Smooth transition when switching themes */
+*,
+*::before,
+*::after {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease;
+}
+
+/* But don't animate things that shouldn't animate */
+button,
+a,
+input,
+select,
+textarea {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.15s ease,
+    box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 }
