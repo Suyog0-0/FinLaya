@@ -2,14 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Cell,
 } from 'recharts';
 import { Target, TrendingUp, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
@@ -23,9 +17,7 @@ interface CategoryData {
 }
 
 const CustomTooltip = ({
-  active,
-  payload,
-  label,
+  active, payload, label,
 }: {
   active?: boolean;
   payload?: Array<{ name: string; value: number }>;
@@ -37,40 +29,34 @@ const CustomTooltip = ({
   const pct = limit > 0 ? Math.round((spent / limit) * 100) : null;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[180px]">
-      <p className="font-semibold text-gray-800 mb-2 truncate">{label}</p>
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[180px]">
+      <p className="font-semibold text-gray-800 dark:text-gray-100 mb-2 truncate">{label}</p>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-gray-500 flex items-center gap-1.5">
+          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-orange-500" />
             Spent
           </span>
-          <span className="font-semibold text-orange-600">
+          <span className="font-semibold text-orange-600 dark:text-orange-400">
             NRs {spent.toLocaleString('en-IN')}
           </span>
         </div>
         {limit > 0 && (
           <div className="flex items-center justify-between">
-            <span className="text-gray-500 flex items-center gap-1.5">
+            <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-green-300" />
               Budget
             </span>
-            <span className="font-semibold text-green-600">
+            <span className="font-semibold text-green-600 dark:text-green-400">
               NRs {limit.toLocaleString('en-IN')}
             </span>
           </div>
         )}
         {pct !== null && (
-          <div className={`pt-2 border-t border-gray-100 mt-2`}>
-            <span
-              className={`text-xs font-semibold flex items-center gap-1 ${
-                pct > 100 ? 'text-red-500' : 'text-green-600'
-              }`}
-            >
+          <div className="pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
+            <span className={`text-xs font-semibold flex items-center gap-1 ${pct > 100 ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
               {pct > 100 ? <AlertCircle size={12} /> : <TrendingUp size={12} />}
-              {pct > 100
-                ? `${pct - 100}% over budget`
-                : `${100 - pct}% remaining`}
+              {pct > 100 ? `${pct - 100}% over budget` : `${100 - pct}% remaining`}
             </span>
           </div>
         )}
@@ -92,45 +78,33 @@ export default function CategoryBreakdownChart() {
     if (!user?.id) return;
 
     const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
-      .toISOString()
-      .split('T')[0];
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-      .toISOString()
-      .split('T')[0];
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
 
     const [catResult, expResult, userResult] = await Promise.all([
-      supabase
-        .from('budget_categories')
+      supabase.from('budget_categories')
         .select('category_id, category_name, budget_limit, allocation_percentage')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true }),
-
-      supabase
-        .from('expenses')
+      supabase.from('expenses')
         .select('amount, category_id')
         .eq('user_id', user.id)
         .gte('expense_date', monthStart)
         .lte('expense_date', monthEnd),
-
-      supabase
-        .from('users')
+      supabase.from('users')
         .select('monthly_salary')
         .eq('user_id', user.id)
         .maybeSingle(),
     ]);
 
-    const monthlySalary = userResult.data
-      ? Number(userResult.data.monthly_salary)
-      : 0;
+    const monthlySalary = userResult.data ? Number(userResult.data.monthly_salary) : 0;
     const categories = catResult.data || [];
     const expenses = expResult.data || [];
 
     const spentMap: Record<number, number> = {};
     expenses.forEach((e) => {
       if (e.category_id) {
-        spentMap[e.category_id] =
-          (spentMap[e.category_id] || 0) + Number(e.amount);
+        spentMap[e.category_id] = (spentMap[e.category_id] || 0) + Number(e.amount);
       }
     });
 
@@ -154,11 +128,7 @@ export default function CategoryBreakdownChart() {
     setIsLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    (async () => {
-      await fetchData();
-    })();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   useEffect(() => {
     const id = setInterval(fetchData, 10000);
@@ -181,19 +151,19 @@ export default function CategoryBreakdownChart() {
 
   if (!isLoading && data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
             <Target size={16} className="text-amber-500" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">Category Breakdown</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Category Breakdown</h2>
         </div>
         <div className="h-[180px] flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-            <Target size={20} className="text-gray-400" />
+          <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <Target size={20} className="text-gray-400 dark:text-gray-500" />
           </div>
-          <p className="text-gray-500 text-sm font-medium">No categories yet</p>
-          <p className="text-gray-400 text-xs mt-1">Set up budgets to see your breakdown</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No categories yet</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Set up budgets to see your breakdown</p>
         </div>
       </div>
     );
@@ -202,28 +172,27 @@ export default function CategoryBreakdownChart() {
   const chartHeight = Math.max(280, data.length * 36);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 flex items-center justify-center">
             <Target size={16} className="text-amber-500" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Category Breakdown</h2>
-            <p className="text-xs text-gray-500 mt-0.5">This month&apos;s spending vs budget</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Category Breakdown</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This month&apos;s spending vs budget</p>
           </div>
         </div>
 
-        {/* Legend */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 rounded-lg">
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
             <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
-            <span className="text-xs text-gray-600 font-medium">Spent</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Spent</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 rounded-lg">
+          <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 dark:bg-green-900/20 rounded-lg">
             <div className="w-2.5 h-2.5 rounded-full bg-green-300" />
-            <span className="text-xs text-gray-600 font-medium">Budget</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Budget</span>
           </div>
         </div>
       </div>
@@ -259,16 +228,8 @@ export default function CategoryBreakdownChart() {
             />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(251, 146, 60, 0.05)' }} />
 
-            {/* Budget bars (background) */}
-            <Bar
-              dataKey="limit"
-              name="limit"
-              fill="#bbf7d0"
-              radius={[6, 6, 0, 0]}
-              opacity={0.6}
-            />
+            <Bar dataKey="limit" name="limit" fill="#bbf7d0" radius={[6, 6, 0, 0]} opacity={0.6} />
 
-            {/* Spent bars (foreground) */}
             <Bar dataKey="spent" name="spent" radius={[6, 6, 0, 0]} animationDuration={500}>
               {data.map((entry, index) => (
                 <Cell

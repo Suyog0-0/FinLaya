@@ -10,20 +10,17 @@ import { EMI } from './utils';
 interface EMIFormModalProps {
   isOpen:    boolean;
   onClose:   () => void;
-  // Called when balance is fine — parent saves directly
   onSaveDirect: (data: Omit<EMI, 'emi_id' | 'is_active'>) => Promise<void>;
-  // Called when EMI exceeds available balance — parent closes this modal first,
-  // then shows its own confirm dialog
   onSaveNeedsConfirm: (data: Omit<EMI, 'emi_id' | 'is_active'>, message: string) => void;
   existing?:        EMI | null;
   availableBalance: number;
 }
 
 const inputClass =
-  'w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 bg-gray-50 focus:bg-white outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all text-gray-800 placeholder-gray-400';
+  'w-full px-3.5 py-2.5 text-sm rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:bg-white dark:focus:bg-gray-600 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:focus:ring-blue-900/40 transition-all text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500';
 
 const inputErrorClass =
-  'w-full px-3.5 py-2.5 text-sm rounded-xl border border-red-300 bg-red-50 focus:bg-white outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 transition-all text-gray-800 placeholder-gray-400';
+  'w-full px-3.5 py-2.5 text-sm rounded-xl border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 focus:bg-white dark:focus:bg-gray-600 outline-none focus:border-red-400 focus:ring-2 focus:ring-red-100 dark:focus:ring-red-900/40 transition-all text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500';
 
 const DEFAULT: Omit<EMI, 'emi_id' | 'is_active'> = {
   loan_name:              '',
@@ -45,7 +42,6 @@ export default function EMIFormModal({
   const [error, setError]             = useState('');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
-  // For the live "exceeds salary" amber warning
   const [monthlySalary, setMonthlySalary]             = useState(0);
   const [otherActiveEMITotal, setOtherActiveEMITotal] = useState(0);
 
@@ -109,7 +105,6 @@ export default function EMIFormModal({
       ? Math.ceil(form.total_amount / form.emi_amount)
       : null;
 
-  // Live amber warning — total EMIs would exceed salary
   const projectedTotalEMI = otherActiveEMITotal + (form.emi_amount || 0);
   const emiExceedsSalary  = monthlySalary > 0 && projectedTotalEMI > monthlySalary;
   const emiWarningMsg     = emiExceedsSalary
@@ -117,7 +112,6 @@ export default function EMIFormModal({
     : null;
 
   const handleSave = async () => {
-    // Validation
     if (!form.loan_name.trim())                  { setError('Loan name is required.'); return; }
     if (!form.total_amount || form.total_amount <= 0) { setError('Please enter a valid total loan amount.'); return; }
     if (!form.emi_amount   || form.emi_amount   <= 0) { setError('Please enter a valid monthly EMI.'); return; }
@@ -130,17 +124,14 @@ export default function EMIFormModal({
       return;
     }
 
-    // If EMI exceeds available balance → hand off to parent which closes this
-    // modal first, then shows its own confirm dialog.
     if (form.emi_amount > availableBalance) {
       onSaveNeedsConfirm(
         form,
         `Your available balance is NRs ${availableBalance.toLocaleString('en-IN')}, but this EMI is NRs ${form.emi_amount.toLocaleString('en-IN')}. Adding this loan may leave you short. Do you want to add it anyway?`,
       );
-      return; // parent will close modal via setModalOpen(false)
+      return;
     }
 
-    // Balance is fine — save directly
     setIsSaving(true);
     setError('');
     try {
@@ -168,27 +159,24 @@ export default function EMIFormModal({
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 16 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100 dark:border-gray-700">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
                     <CreditCard size={16} className="text-blue-500" />
                   </div>
                   <div>
-                    <h2 className="text-base font-bold text-gray-900">
+                    <h2 className="text-base font-bold text-gray-900 dark:text-gray-100">
                       {existing ? 'Edit Loan' : 'Add New Loan'}
                     </h2>
-                    {/* <p className="text-xs text-gray-400">
-                      Fields marked <span className="text-red-400">*</span> are required
-                    </p> */}
                   </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-400 transition-colors"
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 dark:text-gray-500 transition-colors"
                 >
                   <X size={16} />
                 </button>
@@ -196,17 +184,17 @@ export default function EMIFormModal({
 
               <div className="px-6 py-5 space-y-4">
                 {error && (
-                  <div className="bg-red-50 border border-red-100 text-red-600 px-3.5 py-2.5 rounded-xl text-sm">
+                  <div className="bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 text-red-600 dark:text-red-400 px-3.5 py-2.5 rounded-xl text-sm">
                     {error}
                   </div>
                 )}
 
                 {/* Available balance info */}
-                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-gray-50 border border-gray-100 rounded-xl">
-                  <Info size={13} className="text-gray-400 flex-shrink-0" />
-                  <p className="text-xs text-gray-500">
+                <div className="flex items-center gap-2 px-3.5 py-2.5 bg-gray-50 dark:bg-gray-700/50 border border-gray-100 dark:border-gray-600 rounded-xl">
+                  <Info size={13} className="text-gray-400 dark:text-gray-500 flex-shrink-0" />
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Available balance:{' '}
-                    <span className="font-semibold text-gray-700">
+                    <span className="font-semibold text-gray-700 dark:text-gray-300">
                       NRs {availableBalance.toLocaleString('en-IN')}
                     </span>
                   </p>
@@ -214,7 +202,7 @@ export default function EMIFormModal({
 
                 {/* Loan name */}
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                  <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">
                     Loan Name <span className="text-red-400">*</span>
                   </label>
                   <input
@@ -230,11 +218,11 @@ export default function EMIFormModal({
                 {/* Total + EMI */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">
                       Total Loan Amount <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs font-medium">NRs</span>
                       <input
                         type="number" placeholder="0"
                         value={form.total_amount || ''}
@@ -245,11 +233,11 @@ export default function EMIFormModal({
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">
                       Monthly EMI <span className="text-red-400">*</span>
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-medium">NRs</span>
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500 text-xs font-medium">NRs</span>
                       <input
                         type="number" placeholder="0"
                         value={form.emi_amount || ''}
@@ -269,30 +257,29 @@ export default function EMIFormModal({
                 </div>
 
                 {estimatedInstallments && !fieldErrors.emi_amount && (
-                  <p className="text-xs text-blue-600 bg-blue-50 px-3.5 py-2 rounded-xl">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-3.5 py-2 rounded-xl">
                     Estimated <span className="font-semibold">{estimatedInstallments} installments</span> to pay off this loan
                   </p>
                 )}
 
-                {/* Live salary warning */}
                 {emiWarningMsg && (
                   <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                    className="flex items-start gap-2 px-3.5 py-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                    className="flex items-start gap-2 px-3.5 py-2.5 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
                     <Info size={14} className="text-amber-500 mt-0.5 flex-shrink-0" />
-                    <p className="text-xs text-amber-700 font-medium leading-relaxed">{emiWarningMsg}</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 font-medium leading-relaxed">{emiWarningMsg}</p>
                   </motion.div>
                 )}
 
                 {/* Start date + Due day */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Start Date</label>
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">Start Date</label>
                     <input type="date" value={form.start_date}
                       onChange={(e) => set('start_date', e.target.value)}
                       className={inputClass} />
                   </div>
                   <div>
-                    <label className="text-xs font-semibold text-gray-500 uppercase tracking-wide block mb-1.5">Due Day of Month</label>
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide block mb-1.5">Due Day of Month</label>
                     <input type="number" placeholder="e.g. 5"
                       value={form.payment_day || ''}
                       onChange={(e) => set('payment_day', parseInt(e.target.value) || null)}
@@ -312,7 +299,7 @@ export default function EMIFormModal({
               {/* Footer */}
               <div className="px-6 pb-6 flex gap-3">
                 <button onClick={onClose}
-                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   Cancel
                 </button>
                 <motion.button

@@ -41,17 +41,10 @@ export default function RecentTransactions() {
       const [expResult, incResult] = await Promise.all([
         supabase
           .from('expenses')
-          .select(`
-            expense_id,
-            description,
-            amount,
-            expense_date,
-            budget_categories (category_name)
-          `)
+          .select(`expense_id, description, amount, expense_date, budget_categories (category_name)`)
           .eq('user_id', user.id)
           .order('expense_date', { ascending: false })
           .limit(10),
-
         supabase
           .from('income')
           .select('income_id, description, amount, income_date, category_name')
@@ -110,13 +103,13 @@ export default function RecentTransactions() {
   }, [user?.id]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
       {/* Header */}
       <div className="flex items-center justify-between mb-5">
-        <h2 className="text-lg font-bold text-gray-900">Recent Transactions</h2>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Recent Transactions</h2>
         <button
           onClick={() => router.push('/expenses')}
-          className="text-sm font-semibold text-orange-600 hover:text-orange-700 hover:bg-orange-50 px-3 py-1.5 rounded-lg transition-all"
+          className="text-sm font-semibold text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300 hover:bg-orange-50 dark:hover:bg-orange-900/20 px-3 py-1.5 rounded-lg transition-all"
         >
           View All →
         </button>
@@ -127,23 +120,23 @@ export default function RecentTransactions() {
         <div className="space-y-3">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex items-center gap-3 p-3 rounded-xl animate-pulse">
-              <div className="w-10 h-10 rounded-lg bg-gray-100 flex-shrink-0" />
+              <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-gray-700 flex-shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 bg-gray-200 rounded" />
-                <div className="h-3 w-24 bg-gray-100 rounded" />
+                <div className="h-4 w-32 bg-gray-200 dark:bg-gray-700 rounded" />
+                <div className="h-3 w-24 bg-gray-100 dark:bg-gray-700/60 rounded" />
               </div>
-              <div className="h-4 w-20 bg-gray-200 rounded" />
+              <div className="h-4 w-20 bg-gray-200 dark:bg-gray-700 rounded" />
             </div>
           ))}
         </div>
       ) : transactions.length === 0 ? (
         /* Empty State */
         <div className="text-center py-10">
-          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-            <Clock size={20} className="text-gray-400" />
+          <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <Clock size={20} className="text-gray-400 dark:text-gray-500" />
           </div>
-          <p className="text-gray-500 text-sm font-medium">No transactions yet</p>
-          <p className="text-gray-400 text-xs mt-1">Start adding to see them here</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No transactions yet</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Start adding to see them here</p>
         </div>
       ) : (
         /* Transaction List */
@@ -151,15 +144,15 @@ export default function RecentTransactions() {
           {transactions.map((t) => (
             <div
               key={t.id}
-              className="group flex items-center justify-between py-3 px-3 rounded-xl hover:bg-gray-50 transition-colors cursor-default"
+              className="group flex items-center justify-between py-3 px-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-default"
             >
               <div className="flex items-center gap-3 min-w-0">
                 {/* Icon */}
-                <div
-                  className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    t.type === 'income' ? 'bg-green-50' : 'bg-red-50'
-                  }`}
-                >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                  t.type === 'income'
+                    ? 'bg-green-50 dark:bg-green-900/20'
+                    : 'bg-red-50 dark:bg-red-900/20'
+                }`}>
                   {t.type === 'expense' ? (
                     <ArrowDownLeft className="text-red-500" size={18} strokeWidth={2} />
                   ) : (
@@ -169,24 +162,20 @@ export default function RecentTransactions() {
 
                 {/* Info */}
                 <div className="min-w-0">
-                  <p className="font-medium text-gray-900 text-sm truncate">{t.title}</p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{t.title}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    {/* Category Badge */}
-                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md font-medium">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md font-medium">
                       {t.category ?? (t.type === 'income' ? 'Income' : 'Expense')}
                     </span>
-                    {/* Date */}
-                    <span className="text-xs text-gray-400">{formatDate(t.date)}</span>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{formatDate(t.date)}</span>
                   </div>
                 </div>
               </div>
 
               {/* Amount */}
-              <p
-                className={`font-semibold text-sm tabular-nums flex-shrink-0 ${
-                  t.type === 'income' ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
+              <p className={`font-semibold text-sm tabular-nums flex-shrink-0 ${
+                t.type === 'income' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+              }`}>
                 {t.type === 'income' ? '+' : '-'}NRs {t.amount.toLocaleString('en-IN')}
               </p>
             </div>

@@ -9,7 +9,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
       type="button"
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        checked ? 'bg-orange-500' : 'bg-gray-300'
+        checked ? 'bg-orange-500' : 'bg-gray-300 dark:bg-gray-600'
       }`}
     >
       <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${
@@ -51,25 +51,25 @@ export default function NotificationsBox() {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 animate-pulse">
-        <div className="h-5 w-40 bg-gray-100 rounded mb-4" />
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 animate-pulse">
+        <div className="h-5 w-40 bg-gray-100 dark:bg-gray-700 rounded mb-4" />
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-12 bg-gray-50 rounded-xl mb-2" />
+          <div key={i} className="h-12 bg-gray-50 dark:bg-gray-700/50 rounded-xl mb-2" />
         ))}
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100">
-        <div className="w-9 h-9 rounded-xl bg-orange-50 flex items-center justify-center">
+      <div className="flex items-center gap-3 mb-5 pb-4 border-b border-gray-100 dark:border-gray-700">
+        <div className="w-9 h-9 rounded-xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
           <Bell size={18} className="text-orange-500" />
         </div>
         <div>
-          <p className="font-semibold text-gray-900">Notifications</p>
-          <p className="text-xs text-gray-400 mt-0.5">Configure how you receive alerts</p>
+          <p className="font-semibold text-gray-900 dark:text-gray-100">Notifications</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Configure how you receive alerts</p>
         </div>
       </div>
 
@@ -80,15 +80,15 @@ export default function NotificationsBox() {
           return (
             <div
               key={item.key}
-              className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors"
+              className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
             >
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <Icon size={14} className="text-gray-500" />
+                <div className="w-8 h-8 rounded-lg bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                  <Icon size={14} className="text-gray-500 dark:text-gray-400" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-800">{item.label}</p>
-                  <p className="text-xs text-gray-400">{item.desc}</p>
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{item.label}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{item.desc}</p>
                 </div>
               </div>
               <Toggle
@@ -101,9 +101,9 @@ export default function NotificationsBox() {
       </div>
 
       {/* Save */}
-      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+      <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 dark:border-gray-700">
         {saved && (
-          <p className="text-sm font-medium text-green-600">✓ Preferences saved!</p>
+          <p className="text-sm font-medium text-green-600 dark:text-green-400">✓ Preferences saved!</p>
         )}
         <button
           onClick={save}

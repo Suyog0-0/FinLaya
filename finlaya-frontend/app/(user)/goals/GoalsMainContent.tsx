@@ -60,20 +60,26 @@ const GoalCard = ({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.97 }}
-      className={`bg-white rounded-2xl border p-5 hover:border-gray-200 hover:shadow-sm transition-all group ${
-        isComplete ? 'border-emerald-100' : 'border-gray-100'
+      className={`bg-white dark:bg-gray-800 rounded-2xl border p-5 hover:shadow-sm transition-all group ${
+        isComplete
+          ? 'border-emerald-100 dark:border-emerald-800'
+          : 'border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-600'
       }`}
     >
       <div className="flex items-start gap-4">
         {/* Icon + progress */}
         <div className="flex-shrink-0">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isComplete ? 'bg-emerald-50' : 'bg-orange-50'}`}>
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+            isComplete
+              ? 'bg-emerald-50 dark:bg-emerald-900/20'
+              : 'bg-orange-50 dark:bg-orange-900/20'
+          }`}>
             {isComplete
               ? <CheckCircle2 size={18} className="text-emerald-500" />
               : <Icon size={18} className="text-orange-500" />
             }
           </div>
-          <p className={`text-xs font-semibold text-center mt-1 ${isComplete ? 'text-emerald-600' : 'text-orange-500'}`}>
+          <p className={`text-xs font-semibold text-center mt-1 ${isComplete ? 'text-emerald-600 dark:text-emerald-400' : 'text-orange-500'}`}>
             {Math.round(pct)}%
           </p>
         </div>
@@ -83,29 +89,29 @@ const GoalCard = ({
           <div className="flex items-start justify-between gap-2 mb-3">
             <div>
               <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-semibold text-gray-900 text-sm">{goal.title}</h3>
+                <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{goal.title}</h3>
                 {isComplete && (
-                  <span className="bg-emerald-100 text-emerald-700 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
+                  <span className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-[10px] font-semibold px-1.5 py-0.5 rounded-full">
                     COMPLETE
                   </span>
                 )}
               </div>
               {goal.description && (
-                <p className="text-xs text-gray-400 mt-0.5 truncate">{goal.description}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 truncate">{goal.description}</p>
               )}
             </div>
 
             {/* Delete */}
             {confirmDelete ? (
-              <div className="flex items-center gap-1 bg-red-50 border border-red-100 px-2 py-1 rounded-lg flex-shrink-0">
-                <button onClick={() => onDelete(goal.id)} className="text-red-600 text-xs font-semibold">Delete</button>
-                <span className="text-red-200">|</span>
-                <button onClick={() => setConfirmDelete(false)} className="text-gray-400 text-xs">Cancel</button>
+              <div className="flex items-center gap-1 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-800 px-2 py-1 rounded-lg flex-shrink-0">
+                <button onClick={() => onDelete(goal.id)} className="text-red-600 dark:text-red-400 text-xs font-semibold">Delete</button>
+                <span className="text-red-200 dark:text-red-800">|</span>
+                <button onClick={() => setConfirmDelete(false)} className="text-gray-400 dark:text-gray-500 text-xs">Cancel</button>
               </div>
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all flex-shrink-0"
+                className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-300 dark:text-gray-600 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all flex-shrink-0"
               >
                 <Trash2 size={13} />
               </button>
@@ -113,7 +119,7 @@ const GoalCard = ({
           </div>
 
           {/* Progress bar */}
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden mb-3">
             <motion.div
               className={`h-full rounded-full ${isComplete ? 'bg-emerald-400' : 'bg-orange-400'}`}
               initial={{ width: 0 }}
@@ -126,19 +132,21 @@ const GoalCard = ({
           <div className="flex items-center justify-between">
             <div className="flex gap-4">
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Saved</p>
-                <p className="text-xs font-bold text-gray-800">{fmt(goal.saved_amount)}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">Saved</p>
+                <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{fmt(goal.saved_amount)}</p>
               </div>
               <div>
-                <p className="text-[10px] text-gray-400 uppercase tracking-wider">Target</p>
-                <p className="text-xs font-bold text-gray-800">{fmt(goal.target_amount)}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase tracking-wider">Target</p>
+                <p className="text-xs font-bold text-gray-800 dark:text-gray-200">{fmt(goal.target_amount)}</p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
               {goal.deadline && daysLeft !== null && !isComplete && (
                 <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-0.5 ${
-                  daysLeft < 30 ? 'text-red-500 bg-red-50' : 'text-gray-400 bg-gray-100'
+                  daysLeft < 30
+                    ? 'text-red-500 bg-red-50 dark:bg-red-900/20'
+                    : 'text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-700'
                 }`}>
                   {daysLeft < 30 ? <AlertCircle size={8} /> : <CalendarDays size={8} />}
                   {daysLeft === 0 ? 'Due today' : `${daysLeft}d`}
@@ -157,7 +165,7 @@ const GoalCard = ({
 
           {!isComplete && (
             <div className="mt-2">
-              <span className="text-[10px] font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full">
+              <span className="text-[10px] font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-full">
                 {fmt(remaining)} to go
               </span>
             </div>
@@ -173,13 +181,13 @@ const EmptyState = ({ onAdd }: { onAdd: () => void }) => (
   <motion.div
     initial={{ opacity: 0, y: 12 }}
     animate={{ opacity: 1, y: 0 }}
-    className="flex flex-col items-center justify-center py-20 text-center bg-white rounded-2xl border border-dashed border-gray-200"
+    className="flex flex-col items-center justify-center py-20 text-center bg-white dark:bg-gray-800 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700"
   >
-    <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center mb-3">
+    <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center mb-3">
       <Target size={20} className="text-orange-400" />
     </div>
-    <h3 className="text-base font-semibold text-gray-900 mb-1">No goals yet</h3>
-    <p className="text-sm text-gray-400 mb-5 max-w-xs">Create a savings goal to start tracking your progress.</p>
+    <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 mb-1">No goals yet</h3>
+    <p className="text-sm text-gray-400 dark:text-gray-500 mb-5 max-w-xs">Create a savings goal to start tracking your progress.</p>
     <button
       onClick={onAdd}
       className="inline-flex items-center gap-2 bg-orange-500 hover:bg-orange-600 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
@@ -203,7 +211,6 @@ export default function GoalsMainContent() {
     if (!user?.id) return;
     setIsLoading(true);
 
-    // Scope income/expenses to current month so savings limit is accurate
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     const monthEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
@@ -279,14 +286,14 @@ export default function GoalsMainContent() {
   const totalSaved = goals.reduce((s, g) => s + Number(g.saved_amount), 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#0f1117] transition-colors">
       <div className="max-w-3xl mx-auto px-6 py-8">
 
-        {/* Page header — consistent with all other pages */}
+        {/* Page header */}
         <div className="flex items-start justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">My Goals</h1>
-            <p className="text-sm text-gray-500 mt-1">Track your savings goals and progress</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Goals</h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Track your savings goals and progress</p>
           </div>
           <button
             onClick={() => setIsAddOpen(true)}
@@ -297,7 +304,7 @@ export default function GoalsMainContent() {
           </button>
         </div>
 
-        {/* Stats strip — only when there are goals */}
+        {/* Stats strip */}
         {goals.length > 0 && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             {[
@@ -306,36 +313,36 @@ export default function GoalsMainContent() {
                 value: fmt(savingsLimit),
                 icon: PiggyBank,
                 iconColor: 'text-emerald-500',
-                iconBg: 'bg-emerald-50',
+                iconBg: 'bg-emerald-50 dark:bg-emerald-900/20',
               },
               {
                 label: 'Saved in Goals',
                 value: fmt(totalSaved),
                 icon: Target,
                 iconColor: 'text-orange-500',
-                iconBg: 'bg-orange-50',
+                iconBg: 'bg-orange-50 dark:bg-orange-900/20',
               },
               {
                 label: 'Total Target',
                 value: fmt(totalTarget),
                 icon: CalendarDays,
                 iconColor: 'text-amber-500',
-                iconBg: 'bg-amber-50',
+                iconBg: 'bg-amber-50 dark:bg-amber-900/20',
               },
               {
                 label: 'Completed',
                 value: `${completedGoals.length}/${goals.length}`,
                 icon: Star,
                 iconColor: 'text-amber-500',
-                iconBg: 'bg-amber-50',
+                iconBg: 'bg-amber-50 dark:bg-amber-900/20',
               },
             ].map(({ label, value, icon: Icon, iconColor, iconBg }) => (
-              <div key={label} className="bg-white rounded-2xl border border-gray-100 p-5 hover:border-gray-200 hover:shadow-sm transition-all">
+              <div key={label} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm transition-all">
                 <div className={`w-9 h-9 rounded-xl ${iconBg} flex items-center justify-center mb-3`}>
                   <Icon size={16} className={iconColor} />
                 </div>
-                <p className="text-xl font-bold text-gray-900 tabular-nums truncate">{value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-gray-100 tabular-nums truncate">{value}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{label}</p>
               </div>
             ))}
           </div>
@@ -345,7 +352,7 @@ export default function GoalsMainContent() {
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2].map((i) => (
-              <div key={i} className="bg-white rounded-2xl h-28 animate-pulse border border-gray-100" />
+              <div key={i} className="bg-white dark:bg-gray-800 rounded-2xl h-28 animate-pulse border border-gray-100 dark:border-gray-700" />
             ))}
           </div>
         ) : goals.length === 0 ? (
@@ -354,7 +361,7 @@ export default function GoalsMainContent() {
           <div className="space-y-6">
             {activeGoals.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">In Progress</p>
+                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">In Progress</p>
                 <AnimatePresence mode="popLayout">
                   <div className="space-y-3">
                     {activeGoals.map((g) => (
@@ -366,7 +373,7 @@ export default function GoalsMainContent() {
             )}
             {completedGoals.length > 0 && (
               <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Achieved</p>
+                <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-3">Achieved</p>
                 <div className="space-y-3">
                   {completedGoals.map((g) => (
                     <GoalCard key={g.id} goal={g} onDelete={handleDelete} onContribute={setContributeGoal} />

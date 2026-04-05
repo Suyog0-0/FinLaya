@@ -26,39 +26,47 @@ function getLast6Months(): { label: string; year: number; month: number }[] {
   return result;
 }
 
-const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
+const CustomTooltip = ({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ name: string; value: number; color: string }>;
+  label?: string;
+}) => {
   if (!active || !payload?.length) return null;
-  
+
   const income = payload.find((p) => p.name === 'income')?.value ?? 0;
   const expenses = payload.find((p) => p.name === 'expenses')?.value ?? 0;
   const net = income - expenses;
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[200px]">
-      <p className="font-semibold text-gray-800 mb-3">{label}</p>
+    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-lg px-4 py-3 text-sm min-w-[200px]">
+      <p className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{label}</p>
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <span className="text-gray-500 flex items-center gap-2">
+          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
             Income
           </span>
-          <span className="font-semibold text-emerald-600">
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
             NRs {income.toLocaleString('en-IN')}
           </span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-gray-500 flex items-center gap-2">
+          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-2">
             <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
             Expenses
           </span>
-          <span className="font-semibold text-orange-600">
+          <span className="font-semibold text-orange-600 dark:text-orange-400">
             NRs {expenses.toLocaleString('en-IN')}
           </span>
         </div>
-        <div className="pt-2 border-t border-gray-100 mt-2">
+        <div className="pt-2 border-t border-gray-100 dark:border-gray-700 mt-2">
           <div className="flex items-center justify-between">
-            <span className="text-gray-500 text-xs">Net</span>
-            <span className={`text-xs font-semibold flex items-center gap-1 ${net >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            <span className="text-gray-500 dark:text-gray-400 text-xs">Net</span>
+            <span className={`text-xs font-semibold flex items-center gap-1 ${net >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}`}>
               {net >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
               NRs {Math.abs(net).toLocaleString('en-IN')}
             </span>
@@ -145,7 +153,6 @@ export default function SpendingTrendChart() {
     return String(value);
   };
 
-  // Calculate trend for simple indicator
   const getTrend = () => {
     if (data.length < 2) return null;
     const last = data[data.length - 1];
@@ -160,51 +167,52 @@ export default function SpendingTrendChart() {
 
   if (!isLoading && data.length === 0) {
     return (
-      <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
             <Activity size={16} className="text-amber-500" />
           </div>
-          <h2 className="text-lg font-bold text-gray-900">Spending Trend</h2>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Spending Trend</h2>
         </div>
         <div className="h-[180px] flex flex-col items-center justify-center text-center">
-          <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 flex items-center justify-center">
-            <Activity size={20} className="text-gray-400" />
+          <div className="w-12 h-12 mb-3 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+            <Activity size={20} className="text-gray-400 dark:text-gray-500" />
           </div>
-          <p className="text-gray-500 text-sm font-medium">No data yet</p>
-          <p className="text-gray-400 text-xs mt-1">Add income or expenses to see your trend</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm font-medium">No data yet</p>
+          <p className="text-gray-400 dark:text-gray-500 text-xs mt-1">Add income or expenses to see your trend</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm p-6 border border-gray-100">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center border border-amber-100">
+          <div className="w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 flex items-center justify-center">
             <Activity size={16} className="text-amber-500" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Spending Trend</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Last 6 months overview</p>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Spending Trend</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Last 6 months overview</p>
           </div>
         </div>
 
-        {/* Legend + Trend */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 rounded-lg">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-            <span className="text-xs text-gray-600 font-medium">Income</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Income</span>
           </div>
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-50 rounded-lg">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
             <div className="w-2.5 h-2.5 rounded-full bg-orange-400" />
-            <span className="text-xs text-gray-600 font-medium">Expenses</span>
+            <span className="text-xs text-gray-600 dark:text-gray-400 font-medium">Expenses</span>
           </div>
           {trend && (
             <div className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium ${
-              trend.direction === 'up' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'
+              trend.direction === 'up'
+                ? 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'
+                : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'
             }`}>
               {trend.direction === 'up' ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
               {trend.direction === 'up' ? '↑' : '↓'} NRs {trend.value.toLocaleString('en-IN')}
@@ -247,8 +255,7 @@ export default function SpendingTrendChart() {
               tickMargin={4}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#f1f5f9', strokeDasharray: '4 4' }} />
-            
-            {/* Income Area */}
+
             <Area
               type="monotone"
               dataKey="income"
@@ -259,8 +266,6 @@ export default function SpendingTrendChart() {
               activeDot={{ r: 5, stroke: '#fff', strokeWidth: 2 }}
               animationDuration={600}
             />
-            
-            {/* Expenses Area */}
             <Area
               type="monotone"
               dataKey="expenses"
