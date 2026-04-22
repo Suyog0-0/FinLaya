@@ -62,7 +62,7 @@ export default function ProfileBox({
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setAvatarMsg('Please select an image file.');
+      setAvatarMsg('Please select a valid image file with proper format.');
       return;
     }
 

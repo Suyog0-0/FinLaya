@@ -20,44 +20,43 @@ function CategoryRow({
     : cat.allocation_percentage;
 
   return (
-    <tr className="border-b border-gray-50 dark:border-gray-700 hover:bg-gray-50/50 dark:hover:bg-gray-700/30 transition-all group">
+    <tr className="border-b border-gray-50 hover:bg-gray-50/50 transition-all group">
       {/* Category name + icon */}
       <td className="px-5 py-3.5">
         <div className="flex items-center gap-3">
-          {/* Force white icon background in dark mode so icon is visible */}
-          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass} dark:bg-gray-700 dark:text-gray-200`}>
+          <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${colorClass}`}>
             <Icon size={15} strokeWidth={2} />
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{cat.category_name}</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{salaryPct}% of salary</p>
+            <p className="text-sm font-semibold text-gray-800">{cat.category_name}</p>
+            <p className="text-xs text-gray-400">{salaryPct}% of salary</p>
           </div>
         </div>
       </td>
 
       {/* Budget */}
       <td className="px-5 py-3.5">
-        <span className="text-sm text-gray-700 dark:text-gray-300 tabular-nums font-medium">
+        <span className="text-sm text-gray-700 tabular-nums font-medium">
           {formatNRs(cat.budget_limit)}
         </span>
       </td>
 
-      {/* Spent */}
+      {/* Spent — red tint if over */}
       <td className="px-5 py-3.5">
-        <span className={`text-sm tabular-nums font-medium ${isOver ? 'text-red-500 dark:text-red-400' : 'text-gray-700 dark:text-gray-300'}`}>
+        <span className={`text-sm tabular-nums font-medium ${isOver ? 'text-red-500' : 'text-gray-700'}`}>
           {isOver && <span className="mr-1 text-xs">⚠</span>}
           {formatNRs(cat.spent)}
         </span>
       </td>
 
-      {/* Remaining */}
+      {/* Remaining — green if positive, red if negative */}
       <td className="px-5 py-3.5 hidden md:table-cell">
         <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${
           remaining < 0
-            ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
+            ? 'bg-red-100 text-red-600'
             : remaining === 0
-              ? 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
-              : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+              ? 'bg-gray-100 text-gray-500'
+              : 'bg-emerald-100 text-emerald-700'
         }`}>
           {remaining < 0 ? '-' : ''}{formatNRs(Math.abs(remaining))}
         </span>
@@ -73,14 +72,14 @@ function CategoryRow({
         <div className="flex items-center justify-end gap-1">
           <button
             onClick={onEdit}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 transition-colors opacity-0 group-hover:opacity-100"
             title="Edit"
           >
             <Pencil size={14} />
           </button>
           <button
             onClick={() => onDelete(cat.category_id)}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors opacity-0 group-hover:opacity-100"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
             title="Delete"
           >
             <Trash2 size={14} />
@@ -129,10 +128,10 @@ function EditCategoryRow({
   };
 
   return (
-    <tr className="border-b border-orange-100 dark:border-orange-800 border-l-4 border-l-orange-400 bg-orange-50/30 dark:bg-orange-900/10">
+    <tr className="border-b border-orange-100 border-l-4 border-l-orange-400 bg-orange-50/30">
       <td className="px-5 py-2.5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center flex-shrink-0">
             <Tag size={14} className="text-orange-500" />
           </div>
           <input
@@ -141,7 +140,7 @@ function EditCategoryRow({
             onChange={(e) => setEditName(e.target.value)}
             onKeyDown={handleKey}
             placeholder="Category name"
-            className="text-sm font-medium text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full bg-white dark:bg-gray-700"
+            className="text-sm font-medium text-gray-800 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full"
           />
         </div>
       </td>
@@ -155,9 +154,9 @@ function EditCategoryRow({
               onChange={(e) => { setEditBudget(e.target.value); setError(''); }}
               onKeyDown={handleKey}
               min="0" placeholder="0"
-              className={`text-sm text-gray-800 dark:text-gray-100 border rounded-lg pl-9 pr-2.5 py-1.5 outline-none focus:ring-2 w-full tabular-nums bg-white dark:bg-gray-700 ${
+              className={`text-sm text-gray-800 border rounded-lg pl-9 pr-2.5 py-1.5 outline-none focus:ring-2 w-full tabular-nums ${
                 error ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                      : 'border-gray-200 dark:border-gray-600 focus:border-orange-400 focus:ring-orange-100'
+                      : 'border-gray-200 focus:border-orange-400 focus:ring-orange-100'
               }`}
             />
           </div>
@@ -184,7 +183,7 @@ function EditCategoryRow({
               : <Check size={14} />}
           </button>
           <button onClick={onCancel}
-            className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors" title="Cancel">
+            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Cancel">
             <X size={14} />
           </button>
         </div>
@@ -229,10 +228,10 @@ function AddCategoryRow({
   };
 
   return (
-    <tr className="border-b border-dashed border-orange-200 dark:border-orange-800 border-l-4 border-l-orange-300 bg-orange-50/20 dark:bg-orange-900/10">
+    <tr className="border-b border-dashed border-orange-200 border-l-4 border-l-orange-300 bg-orange-50/20">
       <td className="px-5 py-2.5">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg border-2 border-dashed border-orange-200 dark:border-orange-700 flex items-center justify-center flex-shrink-0">
+          <div className="w-8 h-8 rounded-lg border-2 border-dashed border-orange-200 flex items-center justify-center flex-shrink-0">
             <Plus size={13} className="text-orange-400" />
           </div>
           <input
@@ -241,7 +240,7 @@ function AddCategoryRow({
             onChange={(e) => { setName(e.target.value); setError(''); }}
             onKeyDown={handleKey}
             placeholder="Category name..."
-            className="text-sm font-medium text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600 rounded-lg px-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full placeholder-gray-300 bg-white dark:bg-gray-700"
+            className="text-sm font-medium text-gray-800 border border-gray-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full placeholder-gray-300"
           />
         </div>
       </td>
@@ -255,7 +254,7 @@ function AddCategoryRow({
               onChange={(e) => { setBudget(e.target.value); setError(''); }}
               onKeyDown={handleKey}
               min="0" placeholder="0"
-              className="text-sm text-gray-800 dark:text-gray-100 border border-gray-200 dark:border-gray-600 rounded-lg pl-9 pr-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full tabular-nums placeholder-gray-300 bg-white dark:bg-gray-700"
+              className="text-sm text-gray-800 border border-gray-200 rounded-lg pl-9 pr-2.5 py-1.5 outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 w-full tabular-nums placeholder-gray-300"
             />
           </div>
           {pct > 0 && !error && (
@@ -281,7 +280,7 @@ function AddCategoryRow({
               : <Check size={14} />}
           </button>
           <button onClick={onCancel}
-            className="p-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-600 dark:text-gray-300 transition-colors" title="Cancel">
+            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 transition-colors" title="Cancel">
             <X size={14} />
           </button>
         </div>
@@ -314,23 +313,23 @@ export default function CategoryTable({
   onAddSave, onAddCancel, onAddClick,
 }: CategoryTableProps) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-colors">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
       <table className="w-full">
         <thead>
-          <tr className="border-b border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/40">
-            <th className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-5 py-3.5">
+          <tr className="border-b border-gray-100 bg-gray-50/60">
+            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5">
               Category
             </th>
-            <th className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-5 py-3.5">
+            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5">
               Budget
             </th>
-            <th className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-5 py-3.5">
+            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5">
               Spent
             </th>
-            <th className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-5 py-3.5 hidden md:table-cell">
+            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5 hidden md:table-cell">
               Remaining
             </th>
-            <th className="text-left text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider px-5 py-3.5 hidden lg:table-cell">
+            <th className="text-left text-xs font-semibold text-gray-400 uppercase tracking-wider px-5 py-3.5 hidden lg:table-cell">
               Progress
             </th>
             <th className="px-5 py-3.5 w-20 text-right">
@@ -368,25 +367,25 @@ export default function CategoryTable({
 
         {categories.length > 0 && (
           <tfoot>
-            <tr className="border-t-2 border-gray-100 dark:border-gray-700 bg-gray-50/60 dark:bg-gray-700/40">
+            <tr className="border-t-2 border-gray-100 bg-gray-50/60">
               <td className="px-5 py-3">
-                <span className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
                   Total ({categories.length})
                 </span>
               </td>
               <td className="px-5 py-3">
-                <span className="text-sm font-bold text-gray-800 dark:text-gray-100 tabular-nums">{formatNRs(totalBudget)}</span>
+                <span className="text-sm font-bold text-gray-800 tabular-nums">{formatNRs(totalBudget)}</span>
               </td>
               <td className="px-5 py-3">
-                <span className={`text-sm font-bold tabular-nums ${totalSpent > totalBudget ? 'text-red-500 dark:text-red-400' : 'text-gray-800 dark:text-gray-100'}`}>
+                <span className={`text-sm font-bold tabular-nums ${totalSpent > totalBudget ? 'text-red-500' : 'text-gray-800'}`}>
                   {formatNRs(totalSpent)}
                 </span>
               </td>
               <td className="px-5 py-3 hidden md:table-cell">
                 <span className={`inline-flex items-center text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${
                   totalBudget - totalSpent < 0
-                    ? 'bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400'
-                    : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400'
+                    ? 'bg-red-100 text-red-600'
+                    : 'bg-emerald-100 text-emerald-700'
                 }`}>
                   {totalBudget - totalSpent < 0 ? '-' : ''}{formatNRs(Math.abs(totalBudget - totalSpent))}
                 </span>
